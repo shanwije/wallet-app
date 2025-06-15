@@ -61,9 +61,9 @@ func TestCreateUserRequestValidation(t *testing.T) {
 			var req struct {
 				Name string `json:"name"`
 			}
-			
+
 			err := json.Unmarshal([]byte(tt.requestBody), &req)
-			
+
 			if tt.expectError {
 				// Either JSON unmarshal should fail or name should be empty
 				if err == nil && req.Name != "" {
@@ -111,9 +111,9 @@ func TestWalletRequestValidation(t *testing.T) {
 			var req struct {
 				Amount float64 `json:"amount"`
 			}
-			
+
 			err := json.Unmarshal([]byte(tt.requestBody), &req)
-			
+
 			if tt.expectError {
 				// Either JSON unmarshal should fail or amount should be invalid
 				if err == nil && req.Amount > 0 {
@@ -158,9 +158,9 @@ func TestTransferRequestValidation(t *testing.T) {
 				Amount      float64 `json:"amount"`
 				Description string  `json:"description"`
 			}
-			
+
 			err := json.Unmarshal([]byte(tt.requestBody), &req)
-			
+
 			if tt.expectError {
 				// Either JSON unmarshal should fail or to_wallet_id should be invalid
 				if err == nil && req.ToWalletID != "" && req.ToWalletID != "invalid-uuid" {
@@ -204,14 +204,14 @@ func TestRESTfulAPICompliance(t *testing.T) {
 	t.Run("HTTP methods validation", func(t *testing.T) {
 		// Test that we can validate HTTP methods for different operations
 		validMethods := map[string][]string{
-			"users":                    {"POST", "GET"},
-			"wallets/{id}/deposit":     {"POST"},
-			"wallets/{id}/withdraw":    {"POST"},
-			"wallets/{id}/transfer":    {"POST"},
-			"wallets/{id}/balance":     {"GET"},
+			"users":                     {"POST", "GET"},
+			"wallets/{id}/deposit":      {"POST"},
+			"wallets/{id}/withdraw":     {"POST"},
+			"wallets/{id}/transfer":     {"POST"},
+			"wallets/{id}/balance":      {"GET"},
 			"wallets/{id}/transactions": {"GET"},
 		}
-		
+
 		for endpoint, methods := range validMethods {
 			for _, method := range methods {
 				assert.Contains(t, []string{"GET", "POST", "PUT", "DELETE"}, method,
@@ -219,17 +219,17 @@ func TestRESTfulAPICompliance(t *testing.T) {
 			}
 		}
 	})
-	
+
 	t.Run("Status codes validation", func(t *testing.T) {
 		// Test expected status codes for assignment requirements
 		validStatusCodes := []int{
-			http.StatusOK,          // 200 - GET operations, successful updates
-			http.StatusCreated,     // 201 - POST user creation
-			http.StatusBadRequest,  // 400 - validation errors
-			http.StatusNotFound,    // 404 - resource not found
+			http.StatusOK,                  // 200 - GET operations, successful updates
+			http.StatusCreated,             // 201 - POST user creation
+			http.StatusBadRequest,          // 400 - validation errors
+			http.StatusNotFound,            // 404 - resource not found
 			http.StatusInternalServerError, // 500 - server errors
 		}
-		
+
 		for _, code := range validStatusCodes {
 			assert.True(t, code >= 200 && code < 600, "Status code %d should be valid HTTP status", code)
 		}
@@ -241,12 +241,12 @@ func TestErrorHandling(t *testing.T) {
 	t.Run("Error response format", func(t *testing.T) {
 		// Test that error responses are properly formatted
 		errorCases := map[string]int{
-			"Invalid request":         http.StatusBadRequest,
-			"User not found":         http.StatusNotFound,
-			"Insufficient balance":   http.StatusBadRequest,
-			"Internal server error":  http.StatusInternalServerError,
+			"Invalid request":       http.StatusBadRequest,
+			"User not found":        http.StatusNotFound,
+			"Insufficient balance":  http.StatusBadRequest,
+			"Internal server error": http.StatusInternalServerError,
 		}
-		
+
 		for errorMsg, expectedStatus := range errorCases {
 			assert.NotEmpty(t, errorMsg, "Error message should not be empty")
 			assert.True(t, expectedStatus >= 400, "Error status should be 4xx or 5xx")

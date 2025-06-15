@@ -72,7 +72,7 @@ func TestWalletModel(t *testing.T) {
 
 		// Decimal should maintain precision
 		assert.True(t, wallet.Balance.Equal(decimal.NewFromFloat(123.456789)))
-		
+
 		// Test rounding to 2 decimal places (if needed in business logic)
 		rounded := wallet.Balance.Round(2)
 		expected := decimal.NewFromFloat(123.46)
@@ -132,7 +132,7 @@ func TestTransactionModel(t *testing.T) {
 		fromWalletID := uuid.New()
 		referenceID := uuid.New()
 		description := "Transfer to friend"
-		
+
 		transaction := Transaction{
 			ID:          uuid.New(),
 			WalletID:    fromWalletID,
@@ -150,7 +150,7 @@ func TestTransactionModel(t *testing.T) {
 
 	t.Run("Transaction type validation", func(t *testing.T) {
 		validTypes := []string{"deposit", "withdraw", "transfer_in", "transfer_out"}
-		
+
 		for _, transactionType := range validTypes {
 			transaction := Transaction{
 				ID:       uuid.New(),
@@ -158,7 +158,7 @@ func TestTransactionModel(t *testing.T) {
 				Type:     transactionType,
 				Amount:   decimal.NewFromFloat(10.00),
 			}
-			
+
 			assert.Contains(t, validTypes, transaction.Type)
 		}
 	})
@@ -173,7 +173,7 @@ func TestTransactionModel(t *testing.T) {
 
 		// Amount should maintain precision
 		assert.True(t, transaction.Amount.Equal(decimal.NewFromFloat(99.999)))
-		
+
 		// Test business logic rounding (if applied)
 		rounded := transaction.Amount.Round(2)
 		expected := decimal.NewFromFloat(100.00)
