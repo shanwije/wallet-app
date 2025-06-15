@@ -29,6 +29,7 @@ func main() {
 	}
 	defer dbConn.Close()
 	log.Println("Database connection established")
+	
 	// Setup router and inject DB
 	router := api.NewRouter(cfg, dbConn)
 

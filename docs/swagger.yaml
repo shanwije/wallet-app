@@ -2,30 +2,67 @@ definitions:
   handlers.HealthResponse:
     properties:
       service:
-        example: wallet-api
         type: string
       status:
-        example: ok
         type: string
       timestamp:
-        example: "2025-06-15T10:30:00Z"
         type: string
       version:
-        example: 1.0.0
+        type: string
+    type: object
+  handlers.createUserRequest:
+    properties:
+      name:
+        type: string
+    type: object
+  models.UserWithWallet:
+    properties:
+      created_at:
+        type: string
+      id:
+        type: string
+      name:
+        type: string
+      wallet:
+        $ref: '#/definitions/models.Wallet'
+    type: object
+  models.Wallet:
+    properties:
+      balance:
+        type: number
+      created_at:
+        type: string
+      id:
+        type: string
+      user_id:
         type: string
     type: object
 info:
   contact: {}
-  description: This is a simple wallet API that allows users to deposit, withdraw,
-    and transfer money between their wallets.
-  title: Wallet API
-  version: "1.0"
 paths:
-  /health:
-    get:
+  /api/v1/users:
+    post:
       consumes:
       - application/json
-      description: Get the health status of the API
+      parameters:
+      - description: User details
+        in: body
+        name: user
+        required: true
+        schema:
+          $ref: '#/definitions/handlers.createUserRequest'
+      produces:
+      - application/json
+      responses:
+        "201":
+          description: Created
+          schema:
+            $ref: '#/definitions/models.UserWithWallet'
+      summary: Create user
+      tags:
+      - users
+  /health:
+    get:
       produces:
       - application/json
       responses:
@@ -33,7 +70,7 @@ paths:
           description: OK
           schema:
             $ref: '#/definitions/handlers.HealthResponse'
-      summary: Health check endpoint
+      summary: Health check
       tags:
       - health
 swagger: "2.0"

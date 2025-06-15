@@ -12,6 +12,8 @@ import (
 
 	"github.com/shanwije/wallet-app/internal/api/handlers"
 	"github.com/shanwije/wallet-app/internal/config"
+	"github.com/shanwije/wallet-app/internal/repository/postgres"
+	"github.com/shanwije/wallet-app/internal/service"
 )
 
 // Router sets up the HTTP router with all routes
@@ -41,16 +43,25 @@ func NewRouter(cfg *config.Config, db *sqlx.DB) *chi.Mux {
 		})
 	})
 
-	// Handlers
+	// Create repositories
+	userRepo := postgres.NewUserRepository(db)
+	walletRepo := postgres.NewWalletRepository(db)
+
+	// Create services
+	userService := &service.UserService{UserRepo: userRepo, WalletRepo: walletRepo}
+
+	// Create handlers
+	userHandler := &handlers.UserHandler{UserService: userService}
 	healthHandler := handlers.NewHealthHandler()
 
 	// Routes - using configurable API version
 	apiRoute := fmt.Sprintf("/api/%s", cfg.APIVersion)
 	r.Route(apiRoute, func(r chi.Router) {
 		r.Get("/health", healthHandler.GetHealth)
+		r.Post("/users", userHandler.CreateUser)
 	})
 
-	// Health check at root level as well
+	// Health check at root level for simple monitoring
 	r.Get("/health", healthHandler.GetHealth)
 
 	// Swagger documentation
