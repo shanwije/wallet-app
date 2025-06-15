@@ -1,6 +1,7 @@
 package service
 
 import (
+	"context"
 	"database/sql"
 	"errors"
 	"testing"
@@ -19,24 +20,24 @@ type MockUserRepository struct {
 	mock.Mock
 }
 
-func (m *MockUserRepository) CreateUser(name string) (*models.User, error) {
-	args := m.Called(name)
+func (m *MockUserRepository) CreateUser(ctx context.Context, name string) (*models.User, error) {
+	args := m.Called(ctx, name)
 	if args.Get(0) == nil {
 		return nil, args.Error(1)
 	}
 	return args.Get(0).(*models.User), args.Error(1)
 }
 
-func (m *MockUserRepository) GetUserByID(id uuid.UUID) (*models.User, error) {
-	args := m.Called(id)
+func (m *MockUserRepository) GetUserByID(ctx context.Context, id uuid.UUID) (*models.User, error) {
+	args := m.Called(ctx, id)
 	if args.Get(0) == nil {
 		return nil, args.Error(1)
 	}
 	return args.Get(0).(*models.User), args.Error(1)
 }
 
-func (m *MockUserRepository) GetUserWithWallet(id uuid.UUID) (*models.UserWithWallet, error) {
-	args := m.Called(id)
+func (m *MockUserRepository) GetUserWithWallet(ctx context.Context, id uuid.UUID) (*models.UserWithWallet, error) {
+	args := m.Called(ctx, id)
 	if args.Get(0) == nil {
 		return nil, args.Error(1)
 	}
@@ -48,42 +49,42 @@ type MockWalletRepository struct {
 	mock.Mock
 }
 
-func (m *MockWalletRepository) CreateWallet(userID uuid.UUID) (*models.Wallet, error) {
-	args := m.Called(userID)
+func (m *MockWalletRepository) CreateWallet(ctx context.Context, userID uuid.UUID) (*models.Wallet, error) {
+	args := m.Called(ctx, userID)
 	if args.Get(0) == nil {
 		return nil, args.Error(1)
 	}
 	return args.Get(0).(*models.Wallet), args.Error(1)
 }
 
-func (m *MockWalletRepository) GetWalletByUserID(userID uuid.UUID) (*models.Wallet, error) {
-	args := m.Called(userID)
+func (m *MockWalletRepository) GetWalletByUserID(ctx context.Context, userID uuid.UUID) (*models.Wallet, error) {
+	args := m.Called(ctx, userID)
 	return args.Get(0).(*models.Wallet), args.Error(1)
 }
 
-func (m *MockWalletRepository) GetWalletByID(id uuid.UUID) (*models.Wallet, error) {
-	args := m.Called(id)
+func (m *MockWalletRepository) GetWalletByID(ctx context.Context, id uuid.UUID) (*models.Wallet, error) {
+	args := m.Called(ctx, id)
 	return args.Get(0).(*models.Wallet), args.Error(1)
 }
 
-func (m *MockWalletRepository) UpdateBalance(id uuid.UUID, balance decimal.Decimal) error {
-	args := m.Called(id, balance)
+func (m *MockWalletRepository) UpdateBalance(ctx context.Context, id uuid.UUID, balance decimal.Decimal) error {
+	args := m.Called(ctx, id, balance)
 	return args.Error(0)
 }
 
 // Transaction support methods (not used in user tests, but required by interface)
-func (m *MockWalletRepository) BeginTx() (*sql.Tx, error) {
-	args := m.Called()
+func (m *MockWalletRepository) BeginTx(ctx context.Context) (*sql.Tx, error) {
+	args := m.Called(ctx)
 	return nil, args.Error(1) // Return nil for Tx as it's not used in user tests
 }
 
-func (m *MockWalletRepository) UpdateBalanceWithTx(tx *sql.Tx, id uuid.UUID, balance decimal.Decimal) error {
-	args := m.Called(tx, id, balance)
+func (m *MockWalletRepository) UpdateBalanceWithTx(ctx context.Context, tx *sql.Tx, id uuid.UUID, balance decimal.Decimal) error {
+	args := m.Called(ctx, tx, id, balance)
 	return args.Error(0)
 }
 
-func (m *MockWalletRepository) GetWalletByIDWithTx(tx *sql.Tx, id uuid.UUID) (*models.Wallet, error) {
-	args := m.Called(tx, id)
+func (m *MockWalletRepository) GetWalletByIDWithTx(ctx context.Context, tx *sql.Tx, id uuid.UUID) (*models.Wallet, error) {
+	args := m.Called(ctx, tx, id)
 	if args.Get(0) == nil {
 		return nil, args.Error(1)
 	}
@@ -116,10 +117,10 @@ func TestCreateUser(t *testing.T) {
 		CreatedAt: now,
 	}
 
-	userRepo.On("CreateUser", "John Doe").Return(expectedUser, nil)
-	walletRepo.On("CreateWallet", userID).Return(expectedWallet, nil)
+	userRepo.On("CreateUser", mock.Anything, "John Doe").Return(expectedUser, nil)
+	walletRepo.On("CreateWallet", mock.Anything, userID).Return(expectedWallet, nil)
 
-	result, err := service.CreateUser("John Doe")
+	result, err := service.CreateUser(context.Background(), "John Doe")
 
 	assert.NoError(t, err)
 	assert.NotNil(t, result)
@@ -141,9 +142,9 @@ func TestCreateUserError(t *testing.T) {
 		WalletRepo: walletRepo,
 	}
 
-	userRepo.On("CreateUser", "John Doe").Return(nil, errors.New("database error"))
+	userRepo.On("CreateUser", mock.Anything, "John Doe").Return(nil, errors.New("database error"))
 
-	result, err := service.CreateUser("John Doe")
+	result, err := service.CreateUser(context.Background(), "John Doe")
 
 	assert.Error(t, err)
 	assert.Nil(t, result)
@@ -177,9 +178,9 @@ func TestGetUserWithWallet(t *testing.T) {
 		CreatedAt: now,
 	}
 
-	userRepo.On("GetUserWithWallet", userID).Return(expectedUserWithWallet, nil)
+	userRepo.On("GetUserWithWallet", mock.Anything, userID).Return(expectedUserWithWallet, nil)
 
-	result, err := service.GetUserWithWallet(userID)
+	result, err := service.GetUserWithWallet(context.Background(), userID)
 
 	assert.NoError(t, err)
 	assert.NotNil(t, result)
@@ -202,7 +203,7 @@ func TestCreateUserEmptyName(t *testing.T) {
 	}
 
 	// Test empty name validation - should fail early, no repository calls expected
-	result, err := service.CreateUser("")
+	result, err := service.CreateUser(context.Background(), "")
 	assert.Error(t, err)
 	assert.Nil(t, result)
 	assert.Contains(t, err.Error(), "name cannot be empty")

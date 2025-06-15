@@ -4,7 +4,11 @@ import (
 	"encoding/json"
 	"net/http"
 
+	"go.uber.org/zap"
+
 	"github.com/shanwije/wallet-app/internal/service"
+	"github.com/shanwije/wallet-app/pkg/errors"
+	"github.com/shanwije/wallet-app/pkg/logger"
 )
 
 type UserHandler struct {
@@ -31,23 +35,29 @@ func NewUserHandler(userService *service.UserService) *UserHandler {
 // @Success 201 {object} models.UserWithWallet
 // @Router /api/v1/users [post]
 func (h *UserHandler) CreateUser(w http.ResponseWriter, r *http.Request) {
+	log := logger.FromContext(r.Context())
+
 	var req createUserRequest
 	if err := json.NewDecoder(r.Body).Decode(&req); err != nil {
-		http.Error(w, "Invalid request", http.StatusBadRequest)
+		log.Error("Failed to decode request", zap.Error(err))
+		errors.RespondWithError(w, http.StatusBadRequest, "Invalid request format")
 		return
 	}
 
 	if req.Name == "" {
-		http.Error(w, "Name is required", http.StatusBadRequest)
+		log.Warn("User creation failed: empty name provided")
+		errors.RespondWithError(w, http.StatusBadRequest, "Name is required")
 		return
 	}
 
-	user, err := h.UserService.CreateUser(req.Name)
+	user, err := h.UserService.CreateUser(r.Context(), req.Name)
 	if err != nil {
-		http.Error(w, "Failed to create user", http.StatusInternalServerError)
+		log.Error("Failed to create user", zap.Error(err), zap.String("name", req.Name))
+		errors.RespondWithError(w, http.StatusInternalServerError, "Failed to create user")
 		return
 	}
 
+	log.Info("User created successfully", zap.String("user_id", user.ID.String()), zap.String("name", user.Name))
 	w.Header().Set("Content-Type", "application/json")
 	w.WriteHeader(http.StatusCreated)
 	json.NewEncoder(w).Encode(user)

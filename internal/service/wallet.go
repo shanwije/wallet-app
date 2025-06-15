@@ -1,6 +1,7 @@
 package service
 
 import (
+	"context"
 	"fmt"
 
 	"github.com/google/uuid"
@@ -14,13 +15,13 @@ type WalletService struct {
 	TransactionRepo repository.TransactionRepository
 }
 
-func (s *WalletService) Deposit(walletID uuid.UUID, amount decimal.Decimal) (*models.Wallet, error) {
+func (s *WalletService) Deposit(ctx context.Context, walletID uuid.UUID, amount decimal.Decimal) (*models.Wallet, error) {
 	if amount.LessThanOrEqual(decimal.Zero) {
 		return nil, fmt.Errorf("deposit amount must be positive")
 	}
 
 	// Begin database transaction for atomicity
-	tx, err := s.WalletRepo.BeginTx()
+	tx, err := s.WalletRepo.BeginTx(ctx)
 	if err != nil {
 		return nil, fmt.Errorf("failed to begin transaction: %w", err)
 	}
@@ -33,14 +34,14 @@ func (s *WalletService) Deposit(walletID uuid.UUID, amount decimal.Decimal) (*mo
 	}()
 
 	// Get current wallet
-	wallet, err := s.WalletRepo.GetWalletByIDWithTx(tx, walletID)
+	wallet, err := s.WalletRepo.GetWalletByIDWithTx(ctx, tx, walletID)
 	if err != nil {
 		return nil, fmt.Errorf("failed to get wallet: %w", err)
 	}
 
 	// Update balance
 	newBalance := wallet.Balance.Add(amount)
-	err = s.WalletRepo.UpdateBalanceWithTx(tx, walletID, newBalance)
+	err = s.WalletRepo.UpdateBalanceWithTx(ctx, tx, walletID, newBalance)
 	if err != nil {
 		return nil, fmt.Errorf("failed to update wallet balance: %w", err)
 	}
@@ -53,7 +54,7 @@ func (s *WalletService) Deposit(walletID uuid.UUID, amount decimal.Decimal) (*mo
 		Description: nil, // Optional description can be added later
 	}
 
-	err = s.TransactionRepo.CreateTransactionWithTx(tx, transaction)
+	err = s.TransactionRepo.CreateTransactionWithTx(ctx, tx, transaction)
 	if err != nil {
 		return nil, fmt.Errorf("failed to record transaction: %w", err)
 	}
@@ -71,13 +72,13 @@ func (s *WalletService) Deposit(walletID uuid.UUID, amount decimal.Decimal) (*mo
 	return wallet, nil
 }
 
-func (s *WalletService) Withdraw(walletID uuid.UUID, amount decimal.Decimal) (*models.Wallet, error) {
+func (s *WalletService) Withdraw(ctx context.Context, walletID uuid.UUID, amount decimal.Decimal) (*models.Wallet, error) {
 	if amount.LessThanOrEqual(decimal.Zero) {
 		return nil, fmt.Errorf("withdraw amount must be positive")
 	}
 
 	// Begin database transaction for atomicity
-	tx, err := s.WalletRepo.BeginTx()
+	tx, err := s.WalletRepo.BeginTx(ctx)
 	if err != nil {
 		return nil, fmt.Errorf("failed to begin transaction: %w", err)
 	}
@@ -90,7 +91,7 @@ func (s *WalletService) Withdraw(walletID uuid.UUID, amount decimal.Decimal) (*m
 	}()
 
 	// Get current wallet
-	wallet, err := s.WalletRepo.GetWalletByIDWithTx(tx, walletID)
+	wallet, err := s.WalletRepo.GetWalletByIDWithTx(ctx, tx, walletID)
 	if err != nil {
 		return nil, fmt.Errorf("failed to get wallet: %w", err)
 	}
@@ -102,7 +103,7 @@ func (s *WalletService) Withdraw(walletID uuid.UUID, amount decimal.Decimal) (*m
 
 	// Update balance
 	newBalance := wallet.Balance.Sub(amount)
-	err = s.WalletRepo.UpdateBalanceWithTx(tx, walletID, newBalance)
+	err = s.WalletRepo.UpdateBalanceWithTx(ctx, tx, walletID, newBalance)
 	if err != nil {
 		return nil, fmt.Errorf("failed to update wallet balance: %w", err)
 	}
@@ -115,7 +116,7 @@ func (s *WalletService) Withdraw(walletID uuid.UUID, amount decimal.Decimal) (*m
 		Description: nil, // Optional description can be added later
 	}
 
-	err = s.TransactionRepo.CreateTransactionWithTx(tx, transaction)
+	err = s.TransactionRepo.CreateTransactionWithTx(ctx, tx, transaction)
 	if err != nil {
 		return nil, fmt.Errorf("failed to record transaction: %w", err)
 	}
@@ -133,8 +134,8 @@ func (s *WalletService) Withdraw(walletID uuid.UUID, amount decimal.Decimal) (*m
 	return wallet, nil
 }
 
-func (s *WalletService) GetBalance(walletID uuid.UUID) (*models.Wallet, error) {
-	wallet, err := s.WalletRepo.GetWalletByID(walletID)
+func (s *WalletService) GetBalance(ctx context.Context, walletID uuid.UUID) (*models.Wallet, error) {
+	wallet, err := s.WalletRepo.GetWalletByID(ctx, walletID)
 	if err != nil {
 		return nil, fmt.Errorf("failed to get wallet: %w", err)
 	}
@@ -142,8 +143,8 @@ func (s *WalletService) GetBalance(walletID uuid.UUID) (*models.Wallet, error) {
 	return wallet, nil
 }
 
-func (s *WalletService) GetWalletByUserID(userID uuid.UUID) (*models.Wallet, error) {
-	wallet, err := s.WalletRepo.GetWalletByUserID(userID)
+func (s *WalletService) GetWalletByUserID(ctx context.Context, userID uuid.UUID) (*models.Wallet, error) {
+	wallet, err := s.WalletRepo.GetWalletByUserID(ctx, userID)
 	if err != nil {
 		return nil, fmt.Errorf("failed to get wallet for user: %w", err)
 	}
@@ -152,7 +153,7 @@ func (s *WalletService) GetWalletByUserID(userID uuid.UUID) (*models.Wallet, err
 }
 
 // Transfer money between wallets atomically
-func (s *WalletService) Transfer(fromWalletID, toWalletID uuid.UUID, amount decimal.Decimal, description string) error {
+func (s *WalletService) Transfer(ctx context.Context, fromWalletID, toWalletID uuid.UUID, amount decimal.Decimal, description string) error {
 	if amount.LessThanOrEqual(decimal.Zero) {
 		return fmt.Errorf("transfer amount must be positive")
 	}
@@ -162,7 +163,7 @@ func (s *WalletService) Transfer(fromWalletID, toWalletID uuid.UUID, amount deci
 	}
 
 	// Begin database transaction for atomicity
-	tx, err := s.WalletRepo.BeginTx()
+	tx, err := s.WalletRepo.BeginTx(ctx)
 	if err != nil {
 		return fmt.Errorf("failed to begin transaction: %w", err)
 	}
@@ -175,13 +176,13 @@ func (s *WalletService) Transfer(fromWalletID, toWalletID uuid.UUID, amount deci
 	}()
 
 	// Lock and get source wallet (FOR UPDATE to prevent race conditions)
-	fromWallet, err := s.WalletRepo.GetWalletByIDWithTx(tx, fromWalletID)
+	fromWallet, err := s.WalletRepo.GetWalletByIDWithTx(ctx, tx, fromWalletID)
 	if err != nil {
 		return fmt.Errorf("failed to get source wallet: %w", err)
 	}
 
 	// Lock and get destination wallet
-	toWallet, err := s.WalletRepo.GetWalletByIDWithTx(tx, toWalletID)
+	toWallet, err := s.WalletRepo.GetWalletByIDWithTx(ctx, tx, toWalletID)
 	if err != nil {
 		return fmt.Errorf("failed to get destination wallet: %w", err)
 	}
@@ -196,12 +197,12 @@ func (s *WalletService) Transfer(fromWalletID, toWalletID uuid.UUID, amount deci
 	newToBalance := toWallet.Balance.Add(amount)
 
 	// Update balances
-	err = s.WalletRepo.UpdateBalanceWithTx(tx, fromWalletID, newFromBalance)
+	err = s.WalletRepo.UpdateBalanceWithTx(ctx, tx, fromWalletID, newFromBalance)
 	if err != nil {
 		return fmt.Errorf("failed to update source wallet balance: %w", err)
 	}
 
-	err = s.WalletRepo.UpdateBalanceWithTx(tx, toWalletID, newToBalance)
+	err = s.WalletRepo.UpdateBalanceWithTx(ctx, tx, toWalletID, newToBalance)
 	if err != nil {
 		return fmt.Errorf("failed to update destination wallet balance: %w", err)
 	}
@@ -218,7 +219,7 @@ func (s *WalletService) Transfer(fromWalletID, toWalletID uuid.UUID, amount deci
 		Description: &description,
 	}
 
-	err = s.TransactionRepo.CreateTransactionWithTx(tx, outTransaction)
+	err = s.TransactionRepo.CreateTransactionWithTx(ctx, tx, outTransaction)
 	if err != nil {
 		return fmt.Errorf("failed to create outbound transaction: %w", err)
 	}
@@ -232,7 +233,7 @@ func (s *WalletService) Transfer(fromWalletID, toWalletID uuid.UUID, amount deci
 		Description: &description,
 	}
 
-	err = s.TransactionRepo.CreateTransactionWithTx(tx, inTransaction)
+	err = s.TransactionRepo.CreateTransactionWithTx(ctx, tx, inTransaction)
 	if err != nil {
 		return fmt.Errorf("failed to create inbound transaction: %w", err)
 	}
@@ -249,15 +250,15 @@ func (s *WalletService) Transfer(fromWalletID, toWalletID uuid.UUID, amount deci
 }
 
 // GetTransactionHistory gets transaction history for a wallet
-func (s *WalletService) GetTransactionHistory(walletID uuid.UUID) ([]*models.Transaction, error) {
+func (s *WalletService) GetTransactionHistory(ctx context.Context, walletID uuid.UUID) ([]*models.Transaction, error) {
 	// First verify the wallet exists
-	_, err := s.WalletRepo.GetWalletByID(walletID)
+	_, err := s.WalletRepo.GetWalletByID(ctx, walletID)
 	if err != nil {
 		return nil, fmt.Errorf("failed to get wallet: %w", err)
 	}
 
 	// Get transaction history
-	transactions, err := s.TransactionRepo.GetTransactionsByWalletID(walletID)
+	transactions, err := s.TransactionRepo.GetTransactionsByWalletID(ctx, walletID)
 	if err != nil {
 		return nil, fmt.Errorf("failed to get transaction history: %w", err)
 	}

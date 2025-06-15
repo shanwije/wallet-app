@@ -23,30 +23,40 @@ A robust, production-ready centralized wallet backend service built with Go, fol
 - **Database Support**: PostgreSQL with migration support
 - **API Documentation**: Swagger/OpenAPI 3.0 specification
 - **Idempotency**: Prevent duplicate transactions with idempotency keys
-- **Error Handling**: Comprehensive error handling and validation
-- **Testing**: Unit tests and integration tests
-- **Docker Support**: Containerized deployment
-- **Health Checks**: Service health monitoring
+- **Structured Logging**: Production-ready logging with Zap
+- **Error Handling**: Comprehensive error handling with custom error types
+- **Configuration**: Environment-based configuration with validation
+- **Health Checks**: Service health monitoring and readiness endpoints
+- **Context Propagation**: Request context and tracing throughout the application
+- **Graceful Shutdown**: Proper service lifecycle management
+- **Testing**: Unit tests and integration tests with comprehensive coverage
+- **Docker Support**: Containerized deployment with Docker Compose
+- **Code Quality**: Linting, formatting, and static analysis
 
 ## Architecture
 
 ```
 cmd/                    # Application entry points
+├── main.go            # Main application entry point
 internal/
 ├── api/               # HTTP handlers and routing
-│   └── handlers/      # Request handlers
-├── config/            # Configuration management
-├── domain/            # Business domain models
-├── middleware/        # HTTP middleware (idempotency, etc.)
-├── models/            # Data models
-├── repository/        # Data access layer
+│   └── handlers/      # Request handlers with structured logging
+├── config/            # Configuration management with validation
+├── middleware/        # HTTP middleware (idempotency, logging, etc.)
+├── models/            # Data models with validation
+├── repository/        # Data access layer with context support
 │   └── postgres/      # PostgreSQL implementations
-├── service/           # Business logic layer
-└── utils/             # Utility functions
+└── service/           # Business logic layer with context support
 pkg/
-└── db/                # Database connection and utilities
+├── db/                # Database connection and utilities
+├── errors/            # Custom error types and HTTP responses
+├── health/            # Health check utilities
+└── logger/            # Structured logging with Zap
 tests/
 └── integration/       # Integration tests
+docs/                  # Swagger documentation
+deployments/           # Docker Compose configuration
+db/migrations/         # Database migration files
 ```
 
 ## API Endpoints

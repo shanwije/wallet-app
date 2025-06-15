@@ -6,8 +6,12 @@ import (
 
 	"github.com/go-chi/chi/v5"
 	"github.com/google/uuid"
-	"github.com/shanwije/wallet-app/internal/service"
 	"github.com/shopspring/decimal"
+	"go.uber.org/zap"
+
+	"github.com/shanwije/wallet-app/internal/service"
+	"github.com/shanwije/wallet-app/pkg/errors"
+	"github.com/shanwije/wallet-app/pkg/logger"
 )
 
 type WalletHandler struct {
@@ -45,27 +49,39 @@ func NewWalletHandler(walletService *service.WalletService) *WalletHandler {
 // @Success 200 {object} models.Wallet
 // @Router /api/v1/wallets/{id}/deposit [post]
 func (h *WalletHandler) Deposit(w http.ResponseWriter, r *http.Request) {
+	log := logger.FromContext(r.Context())
+	ctx := r.Context()
 	walletIDStr := chi.URLParam(r, "id")
 	walletID, err := uuid.Parse(walletIDStr)
 	if err != nil {
-		http.Error(w, "Invalid wallet ID", http.StatusBadRequest)
+		log.Error("Invalid wallet ID in deposit request", zap.Error(err), zap.String("id", walletIDStr))
+		errors.RespondWithError(w, http.StatusBadRequest, "Invalid wallet ID")
 		return
 	}
 
 	var req depositRequest
 	if err := json.NewDecoder(r.Body).Decode(&req); err != nil {
-		http.Error(w, "Invalid request", http.StatusBadRequest)
+		log.Error("Failed to decode deposit request", zap.Error(err))
+		errors.RespondWithError(w, http.StatusBadRequest, "Invalid request format")
 		return
 	}
 
 	// Convert float64 to decimal for precise calculations
 	amount := decimal.NewFromFloat(req.Amount)
 
-	wallet, err := h.WalletService.Deposit(walletID, amount)
+	wallet, err := h.WalletService.Deposit(ctx, walletID, amount)
 	if err != nil {
-		http.Error(w, err.Error(), http.StatusBadRequest)
+		log.Error("Deposit failed", zap.Error(err),
+			zap.String("wallet_id", walletID.String()),
+			zap.String("amount", amount.String()))
+		errors.RespondWithError(w, http.StatusBadRequest, err.Error())
 		return
 	}
+
+	log.Info("Deposit successful",
+		zap.String("wallet_id", walletID.String()),
+		zap.String("amount", amount.String()),
+		zap.String("new_balance", wallet.Balance.String()))
 
 	w.Header().Set("Content-Type", "application/json")
 	json.NewEncoder(w).Encode(wallet)
@@ -81,27 +97,39 @@ func (h *WalletHandler) Deposit(w http.ResponseWriter, r *http.Request) {
 // @Success 200 {object} models.Wallet
 // @Router /api/v1/wallets/{id}/withdraw [post]
 func (h *WalletHandler) Withdraw(w http.ResponseWriter, r *http.Request) {
+	log := logger.FromContext(r.Context())
+	ctx := r.Context()
 	walletIDStr := chi.URLParam(r, "id")
 	walletID, err := uuid.Parse(walletIDStr)
 	if err != nil {
-		http.Error(w, "Invalid wallet ID", http.StatusBadRequest)
+		log.Error("Invalid wallet ID in withdraw request", zap.Error(err), zap.String("id", walletIDStr))
+		errors.RespondWithError(w, http.StatusBadRequest, "Invalid wallet ID")
 		return
 	}
 
 	var req withdrawRequest
 	if err := json.NewDecoder(r.Body).Decode(&req); err != nil {
-		http.Error(w, "Invalid request", http.StatusBadRequest)
+		log.Error("Failed to decode withdraw request", zap.Error(err))
+		errors.RespondWithError(w, http.StatusBadRequest, "Invalid request format")
 		return
 	}
 
 	// Convert float64 to decimal for precise calculations
 	amount := decimal.NewFromFloat(req.Amount)
 
-	wallet, err := h.WalletService.Withdraw(walletID, amount)
+	wallet, err := h.WalletService.Withdraw(ctx, walletID, amount)
 	if err != nil {
-		http.Error(w, err.Error(), http.StatusBadRequest)
+		log.Error("Withdraw failed", zap.Error(err),
+			zap.String("wallet_id", walletID.String()),
+			zap.String("amount", amount.String()))
+		errors.RespondWithError(w, http.StatusBadRequest, err.Error())
 		return
 	}
+
+	log.Info("Withdraw successful",
+		zap.String("wallet_id", walletID.String()),
+		zap.String("amount", amount.String()),
+		zap.String("new_balance", wallet.Balance.String()))
 
 	w.Header().Set("Content-Type", "application/json")
 	json.NewEncoder(w).Encode(wallet)
@@ -117,6 +145,7 @@ func (h *WalletHandler) Withdraw(w http.ResponseWriter, r *http.Request) {
 // @Success 200 {object} models.Wallet
 // @Router /api/v1/wallets/{id}/transfer [post]
 func (h *WalletHandler) Transfer(w http.ResponseWriter, r *http.Request) {
+	ctx := r.Context()
 	fromWalletIDStr := chi.URLParam(r, "id")
 	fromWalletID, err := uuid.Parse(fromWalletIDStr)
 	if err != nil {
@@ -139,7 +168,7 @@ func (h *WalletHandler) Transfer(w http.ResponseWriter, r *http.Request) {
 	// Convert float64 to decimal for precise calculations
 	amount := decimal.NewFromFloat(req.Amount)
 
-	err = h.WalletService.Transfer(fromWalletID, toWalletID, amount, req.Description)
+	err = h.WalletService.Transfer(ctx, fromWalletID, toWalletID, amount, req.Description)
 	if err != nil {
 		http.Error(w, err.Error(), http.StatusBadRequest)
 		return
@@ -159,6 +188,7 @@ func (h *WalletHandler) Transfer(w http.ResponseWriter, r *http.Request) {
 // @Success 200 {object} models.Wallet
 // @Router /api/v1/wallets/{id}/balance [get]
 func (h *WalletHandler) GetBalance(w http.ResponseWriter, r *http.Request) {
+	ctx := r.Context()
 	walletIDStr := chi.URLParam(r, "id")
 	walletID, err := uuid.Parse(walletIDStr)
 	if err != nil {
@@ -166,7 +196,7 @@ func (h *WalletHandler) GetBalance(w http.ResponseWriter, r *http.Request) {
 		return
 	}
 
-	wallet, err := h.WalletService.GetBalance(walletID)
+	wallet, err := h.WalletService.GetBalance(ctx, walletID)
 	if err != nil {
 		http.Error(w, err.Error(), http.StatusNotFound)
 		return
@@ -184,6 +214,7 @@ func (h *WalletHandler) GetBalance(w http.ResponseWriter, r *http.Request) {
 // @Success 200 {array} models.Transaction
 // @Router /api/v1/wallets/{id}/transactions [get]
 func (h *WalletHandler) GetTransactionHistory(w http.ResponseWriter, r *http.Request) {
+	ctx := r.Context()
 	walletIDStr := chi.URLParam(r, "id")
 	walletID, err := uuid.Parse(walletIDStr)
 	if err != nil {
@@ -191,7 +222,7 @@ func (h *WalletHandler) GetTransactionHistory(w http.ResponseWriter, r *http.Req
 		return
 	}
 
-	transactions, err := h.WalletService.GetTransactionHistory(walletID)
+	transactions, err := h.WalletService.GetTransactionHistory(ctx, walletID)
 	if err != nil {
 		http.Error(w, err.Error(), http.StatusNotFound)
 		return

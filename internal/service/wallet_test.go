@@ -1,6 +1,7 @@
 package service
 
 import (
+	"context"
 	"database/sql"
 	"testing"
 
@@ -17,48 +18,48 @@ type MockWalletRepositoryTest struct {
 	mock.Mock
 }
 
-func (m *MockWalletRepositoryTest) CreateWallet(userID uuid.UUID) (*models.Wallet, error) {
-	args := m.Called(userID)
+func (m *MockWalletRepositoryTest) CreateWallet(ctx context.Context, userID uuid.UUID) (*models.Wallet, error) {
+	args := m.Called(ctx, userID)
 	if args.Get(0) == nil {
 		return nil, args.Error(1)
 	}
 	return args.Get(0).(*models.Wallet), args.Error(1)
 }
 
-func (m *MockWalletRepositoryTest) GetWalletByUserID(userID uuid.UUID) (*models.Wallet, error) {
-	args := m.Called(userID)
+func (m *MockWalletRepositoryTest) GetWalletByUserID(ctx context.Context, userID uuid.UUID) (*models.Wallet, error) {
+	args := m.Called(ctx, userID)
 	if args.Get(0) == nil {
 		return nil, args.Error(1)
 	}
 	return args.Get(0).(*models.Wallet), args.Error(1)
 }
 
-func (m *MockWalletRepositoryTest) GetWalletByID(id uuid.UUID) (*models.Wallet, error) {
-	args := m.Called(id)
+func (m *MockWalletRepositoryTest) GetWalletByID(ctx context.Context, id uuid.UUID) (*models.Wallet, error) {
+	args := m.Called(ctx, id)
 	if args.Get(0) == nil {
 		return nil, args.Error(1)
 	}
 	return args.Get(0).(*models.Wallet), args.Error(1)
 }
 
-func (m *MockWalletRepositoryTest) UpdateBalance(id uuid.UUID, balance decimal.Decimal) error {
-	args := m.Called(id, balance)
+func (m *MockWalletRepositoryTest) UpdateBalance(ctx context.Context, id uuid.UUID, balance decimal.Decimal) error {
+	args := m.Called(ctx, id, balance)
 	return args.Error(0)
 }
 
 // Mock transaction methods
-func (m *MockWalletRepositoryTest) BeginTx() (*sql.Tx, error) {
-	args := m.Called()
+func (m *MockWalletRepositoryTest) BeginTx(ctx context.Context) (*sql.Tx, error) {
+	args := m.Called(ctx)
 	return args.Get(0).(*sql.Tx), args.Error(1)
 }
 
-func (m *MockWalletRepositoryTest) UpdateBalanceWithTx(tx *sql.Tx, id uuid.UUID, balance decimal.Decimal) error {
-	args := m.Called(tx, id, balance)
+func (m *MockWalletRepositoryTest) UpdateBalanceWithTx(ctx context.Context, tx *sql.Tx, id uuid.UUID, balance decimal.Decimal) error {
+	args := m.Called(ctx, tx, id, balance)
 	return args.Error(0)
 }
 
-func (m *MockWalletRepositoryTest) GetWalletByIDWithTx(tx *sql.Tx, id uuid.UUID) (*models.Wallet, error) {
-	args := m.Called(tx, id)
+func (m *MockWalletRepositoryTest) GetWalletByIDWithTx(ctx context.Context, tx *sql.Tx, id uuid.UUID) (*models.Wallet, error) {
+	args := m.Called(ctx, tx, id)
 	if args.Get(0) == nil {
 		return nil, args.Error(1)
 	}
@@ -70,18 +71,18 @@ type MockTransactionRepositoryTest struct {
 	mock.Mock
 }
 
-func (m *MockTransactionRepositoryTest) CreateTransaction(transaction *models.Transaction) error {
-	args := m.Called(transaction)
+func (m *MockTransactionRepositoryTest) CreateTransaction(ctx context.Context, transaction *models.Transaction) error {
+	args := m.Called(ctx, transaction)
 	return args.Error(0)
 }
 
-func (m *MockTransactionRepositoryTest) CreateTransactionWithTx(tx *sql.Tx, transaction *models.Transaction) error {
-	args := m.Called(tx, transaction)
+func (m *MockTransactionRepositoryTest) CreateTransactionWithTx(ctx context.Context, tx *sql.Tx, transaction *models.Transaction) error {
+	args := m.Called(ctx, tx, transaction)
 	return args.Error(0)
 }
 
-func (m *MockTransactionRepositoryTest) GetTransactionsByWalletID(walletID uuid.UUID) ([]*models.Transaction, error) {
-	args := m.Called(walletID)
+func (m *MockTransactionRepositoryTest) GetTransactionsByWalletID(ctx context.Context, walletID uuid.UUID) ([]*models.Transaction, error) {
+	args := m.Called(ctx, walletID)
 	return args.Get(0).([]*models.Transaction), args.Error(1)
 }
 
@@ -104,12 +105,12 @@ func TestWalletDeposit(t *testing.T) {
 	depositAmount := decimal.NewFromFloat(50.0)
 
 	// Use nil transaction for simplicity in unit tests
-	walletRepo.On("BeginTx").Return((*sql.Tx)(nil), nil)
-	walletRepo.On("GetWalletByIDWithTx", (*sql.Tx)(nil), walletID).Return(wallet, nil)
-	walletRepo.On("UpdateBalanceWithTx", (*sql.Tx)(nil), walletID, expectedBalance).Return(nil)
-	transactionRepo.On("CreateTransactionWithTx", (*sql.Tx)(nil), mock.AnythingOfType("*models.Transaction")).Return(nil)
+	walletRepo.On("BeginTx", mock.Anything).Return((*sql.Tx)(nil), nil)
+	walletRepo.On("GetWalletByIDWithTx", mock.Anything, (*sql.Tx)(nil), walletID).Return(wallet, nil)
+	walletRepo.On("UpdateBalanceWithTx", mock.Anything, (*sql.Tx)(nil), walletID, expectedBalance).Return(nil)
+	transactionRepo.On("CreateTransactionWithTx", mock.Anything, (*sql.Tx)(nil), mock.AnythingOfType("*models.Transaction")).Return(nil)
 
-	result, err := service.Deposit(walletID, depositAmount)
+	result, err := service.Deposit(context.Background(), walletID, depositAmount)
 
 	assert.NoError(t, err)
 	assert.NotNil(t, result)
@@ -136,12 +137,12 @@ func TestWalletWithdraw(t *testing.T) {
 	expectedBalance := decimal.NewFromFloat(50.0)
 	withdrawAmount := decimal.NewFromFloat(50.0)
 
-	walletRepo.On("BeginTx").Return((*sql.Tx)(nil), nil)
-	walletRepo.On("GetWalletByIDWithTx", (*sql.Tx)(nil), walletID).Return(wallet, nil)
-	walletRepo.On("UpdateBalanceWithTx", (*sql.Tx)(nil), walletID, expectedBalance).Return(nil)
-	transactionRepo.On("CreateTransactionWithTx", (*sql.Tx)(nil), mock.AnythingOfType("*models.Transaction")).Return(nil)
+	walletRepo.On("BeginTx", mock.Anything).Return((*sql.Tx)(nil), nil)
+	walletRepo.On("GetWalletByIDWithTx", mock.Anything, (*sql.Tx)(nil), walletID).Return(wallet, nil)
+	walletRepo.On("UpdateBalanceWithTx", mock.Anything, (*sql.Tx)(nil), walletID, expectedBalance).Return(nil)
+	transactionRepo.On("CreateTransactionWithTx", mock.Anything, (*sql.Tx)(nil), mock.AnythingOfType("*models.Transaction")).Return(nil)
 
-	result, err := service.Withdraw(walletID, withdrawAmount)
+	result, err := service.Withdraw(context.Background(), walletID, withdrawAmount)
 
 	assert.NoError(t, err)
 	assert.NotNil(t, result)
@@ -167,10 +168,10 @@ func TestWalletWithdrawInsufficientBalance(t *testing.T) {
 
 	withdrawAmount := decimal.NewFromFloat(50.0)
 
-	walletRepo.On("BeginTx").Return((*sql.Tx)(nil), nil)
-	walletRepo.On("GetWalletByIDWithTx", (*sql.Tx)(nil), walletID).Return(wallet, nil)
+	walletRepo.On("BeginTx", mock.Anything).Return((*sql.Tx)(nil), nil)
+	walletRepo.On("GetWalletByIDWithTx", mock.Anything, (*sql.Tx)(nil), walletID).Return(wallet, nil)
 
-	result, err := service.Withdraw(walletID, withdrawAmount)
+	result, err := service.Withdraw(context.Background(), walletID, withdrawAmount)
 
 	assert.Error(t, err)
 	assert.Nil(t, result)
@@ -188,9 +189,9 @@ func TestWalletGetBalance(t *testing.T) {
 		Balance: decimal.NewFromFloat(100.0),
 	}
 
-	walletRepo.On("GetWalletByID", walletID).Return(wallet, nil)
+	walletRepo.On("GetWalletByID", mock.Anything, walletID).Return(wallet, nil)
 
-	result, err := service.GetBalance(walletID)
+	result, err := service.GetBalance(context.Background(), walletID)
 
 	assert.NoError(t, err)
 	assert.NotNil(t, result)
@@ -209,7 +210,7 @@ func TestWalletDepositNegativeAmount(t *testing.T) {
 	walletID := uuid.New()
 	negativeAmount := decimal.NewFromFloat(-10.0)
 
-	result, err := service.Deposit(walletID, negativeAmount)
+	result, err := service.Deposit(context.Background(), walletID, negativeAmount)
 
 	assert.Error(t, err)
 	assert.Nil(t, result)
@@ -228,12 +229,12 @@ func TestWalletTransferValidation(t *testing.T) {
 	toWalletID := uuid.New()
 
 	// Test negative amount
-	err := service.Transfer(fromWalletID, toWalletID, decimal.NewFromFloat(-10.0), "Test")
+	err := service.Transfer(context.Background(), fromWalletID, toWalletID, decimal.NewFromFloat(-10.0), "Test")
 	assert.Error(t, err)
 	assert.Contains(t, err.Error(), "transfer amount must be positive")
 
 	// Test same wallet transfer
-	err = service.Transfer(fromWalletID, fromWalletID, decimal.NewFromFloat(10.0), "Test")
+	err = service.Transfer(context.Background(), fromWalletID, fromWalletID, decimal.NewFromFloat(10.0), "Test")
 	assert.Error(t, err)
 	assert.Contains(t, err.Error(), "cannot transfer to the same wallet")
 }
@@ -261,11 +262,11 @@ func TestWalletTransferInsufficientBalance(t *testing.T) {
 		Balance: decimal.NewFromFloat(25.0),
 	}
 
-	walletRepo.On("BeginTx").Return((*sql.Tx)(nil), nil)
-	walletRepo.On("GetWalletByIDWithTx", (*sql.Tx)(nil), fromWalletID).Return(fromWallet, nil)
-	walletRepo.On("GetWalletByIDWithTx", (*sql.Tx)(nil), toWalletID).Return(toWallet, nil)
+	walletRepo.On("BeginTx", mock.Anything).Return((*sql.Tx)(nil), nil)
+	walletRepo.On("GetWalletByIDWithTx", mock.Anything, (*sql.Tx)(nil), fromWalletID).Return(fromWallet, nil)
+	walletRepo.On("GetWalletByIDWithTx", mock.Anything, (*sql.Tx)(nil), toWalletID).Return(toWallet, nil)
 
-	err := service.Transfer(fromWalletID, toWalletID, transferAmount, "Test transfer")
+	err := service.Transfer(context.Background(), fromWalletID, toWalletID, transferAmount, "Test transfer")
 
 	assert.Error(t, err)
 	assert.Contains(t, err.Error(), "insufficient balance")
@@ -302,10 +303,10 @@ func TestWalletGetTransactionHistory(t *testing.T) {
 		},
 	}
 
-	walletRepo.On("GetWalletByID", walletID).Return(wallet, nil)
-	transactionRepo.On("GetTransactionsByWalletID", walletID).Return(transactions, nil)
+	walletRepo.On("GetWalletByID", mock.Anything, walletID).Return(wallet, nil)
+	transactionRepo.On("GetTransactionsByWalletID", mock.Anything, walletID).Return(transactions, nil)
 
-	result, err := service.GetTransactionHistory(walletID)
+	result, err := service.GetTransactionHistory(context.Background(), walletID)
 
 	assert.NoError(t, err)
 	assert.NotNil(t, result)
@@ -329,7 +330,7 @@ func TestWalletDepositZeroAmount(t *testing.T) {
 	walletID := uuid.New()
 	zeroAmount := decimal.Zero
 
-	result, err := service.Deposit(walletID, zeroAmount)
+	result, err := service.Deposit(context.Background(), walletID, zeroAmount)
 
 	assert.Error(t, err)
 	assert.Nil(t, result)
@@ -347,7 +348,7 @@ func TestWalletWithdrawZeroAmount(t *testing.T) {
 	walletID := uuid.New()
 	zeroAmount := decimal.Zero
 
-	result, err := service.Withdraw(walletID, zeroAmount)
+	result, err := service.Withdraw(context.Background(), walletID, zeroAmount)
 
 	assert.Error(t, err)
 	assert.Nil(t, result)
@@ -366,7 +367,7 @@ func TestWalletTransferZeroAmount(t *testing.T) {
 	toWalletID := uuid.New()
 	zeroAmount := decimal.Zero
 
-	err := service.Transfer(fromWalletID, toWalletID, zeroAmount, "Test")
+	err := service.Transfer(context.Background(), fromWalletID, toWalletID, zeroAmount, "Test")
 
 	assert.Error(t, err)
 	assert.Contains(t, err.Error(), "transfer amount must be positive")

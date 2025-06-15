@@ -1,6 +1,7 @@
 package postgres
 
 import (
+	"context"
 	"database/sql"
 	"fmt"
 
@@ -17,7 +18,7 @@ func NewTransactionRepository(db *sqlx.DB) *TransactionRepository {
 	return &TransactionRepository{db: db}
 }
 
-func (r *TransactionRepository) CreateTransaction(transaction *models.Transaction) error {
+func (r *TransactionRepository) CreateTransaction(ctx context.Context, transaction *models.Transaction) error {
 	transaction.ID = uuid.New()
 
 	query := `
@@ -25,7 +26,7 @@ func (r *TransactionRepository) CreateTransaction(transaction *models.Transactio
 		VALUES ($1, $2, $3, $4, $5, $6) 
 		RETURNING created_at`
 
-	err := r.db.QueryRow(query,
+	err := r.db.QueryRowContext(ctx, query,
 		transaction.ID,
 		transaction.WalletID,
 		transaction.Type,
@@ -41,7 +42,7 @@ func (r *TransactionRepository) CreateTransaction(transaction *models.Transactio
 	return nil
 }
 
-func (r *TransactionRepository) CreateTransactionWithTx(tx *sql.Tx, transaction *models.Transaction) error {
+func (r *TransactionRepository) CreateTransactionWithTx(ctx context.Context, tx *sql.Tx, transaction *models.Transaction) error {
 	transaction.ID = uuid.New()
 
 	query := `
@@ -49,7 +50,7 @@ func (r *TransactionRepository) CreateTransactionWithTx(tx *sql.Tx, transaction 
 		VALUES ($1, $2, $3, $4, $5, $6) 
 		RETURNING created_at`
 
-	err := tx.QueryRow(query,
+	err := tx.QueryRowContext(ctx, query,
 		transaction.ID,
 		transaction.WalletID,
 		transaction.Type,
@@ -65,7 +66,7 @@ func (r *TransactionRepository) CreateTransactionWithTx(tx *sql.Tx, transaction 
 	return nil
 }
 
-func (r *TransactionRepository) GetTransactionsByWalletID(walletID uuid.UUID) ([]*models.Transaction, error) {
+func (r *TransactionRepository) GetTransactionsByWalletID(ctx context.Context, walletID uuid.UUID) ([]*models.Transaction, error) {
 	var transactions []*models.Transaction
 
 	query := `
@@ -74,7 +75,7 @@ func (r *TransactionRepository) GetTransactionsByWalletID(walletID uuid.UUID) ([
 		WHERE wallet_id = $1 
 		ORDER BY created_at DESC`
 
-	rows, err := r.db.Query(query, walletID)
+	rows, err := r.db.QueryContext(ctx, query, walletID)
 	if err != nil {
 		return nil, fmt.Errorf("failed to get transactions: %w", err)
 	}

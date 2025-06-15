@@ -1,6 +1,7 @@
 package postgres
 
 import (
+	"context"
 	"database/sql"
 	"fmt"
 
@@ -18,7 +19,7 @@ func NewUserRepository(db *sqlx.DB) *UserRepository {
 	return &UserRepository{db: db}
 }
 
-func (r *UserRepository) CreateUser(name string) (*models.User, error) {
+func (r *UserRepository) CreateUser(ctx context.Context, name string) (*models.User, error) {
 	user := &models.User{
 		ID:   uuid.New(),
 		Name: name,
@@ -29,7 +30,7 @@ func (r *UserRepository) CreateUser(name string) (*models.User, error) {
 		VALUES ($1, $2) 
 		RETURNING created_at`
 
-	err := r.db.QueryRow(query, user.ID, user.Name).Scan(&user.CreatedAt)
+	err := r.db.QueryRowContext(ctx, query, user.ID, user.Name).Scan(&user.CreatedAt)
 	if err != nil {
 		return nil, fmt.Errorf("failed to create user: %w", err)
 	}
@@ -37,11 +38,11 @@ func (r *UserRepository) CreateUser(name string) (*models.User, error) {
 	return user, nil
 }
 
-func (r *UserRepository) GetUserByID(id uuid.UUID) (*models.User, error) {
+func (r *UserRepository) GetUserByID(ctx context.Context, id uuid.UUID) (*models.User, error) {
 	user := &models.User{}
 	query := `SELECT id, name, created_at FROM users WHERE id = $1`
 
-	err := r.db.Get(user, query, id)
+	err := r.db.GetContext(ctx, user, query, id)
 	if err != nil {
 		if err == sql.ErrNoRows {
 			return nil, fmt.Errorf("user not found")
@@ -52,7 +53,7 @@ func (r *UserRepository) GetUserByID(id uuid.UUID) (*models.User, error) {
 	return user, nil
 }
 
-func (r *UserRepository) GetUserWithWallet(id uuid.UUID) (*models.UserWithWallet, error) {
+func (r *UserRepository) GetUserWithWallet(ctx context.Context, id uuid.UUID) (*models.UserWithWallet, error) {
 	var userWithWallet models.UserWithWallet
 	query := `
 		SELECT 
@@ -62,7 +63,7 @@ func (r *UserRepository) GetUserWithWallet(id uuid.UUID) (*models.UserWithWallet
 		LEFT JOIN wallets w ON u.id = w.user_id
 		WHERE u.id = $1`
 
-	row := r.db.QueryRow(query, id)
+	row := r.db.QueryRowContext(ctx, query, id)
 
 	var walletID sql.NullString
 	var walletUserID sql.NullString

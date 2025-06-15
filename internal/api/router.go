@@ -2,13 +2,13 @@ package api
 
 import (
 	"fmt"
-	"log"
 	"net/http"
 
 	"github.com/go-chi/chi/v5"
 	"github.com/go-chi/chi/v5/middleware"
 	"github.com/jmoiron/sqlx"
 	httpSwagger "github.com/swaggo/http-swagger"
+	"go.uber.org/zap"
 
 	"github.com/shanwije/wallet-app/internal/api/handlers"
 	"github.com/shanwije/wallet-app/internal/config"
@@ -18,13 +18,13 @@ import (
 )
 
 // Router sets up the HTTP router with all routes
-func NewRouter(cfg *config.Config, db *sqlx.DB) *chi.Mux {
+func NewRouter(cfg *config.Config, db *sqlx.DB, logger *zap.Logger) *chi.Mux {
 	r := chi.NewRouter()
 
 	// Middleware
-	r.Use(middleware.Logger)
+	r.Use(custommiddleware.RequestIDMiddleware())
+	r.Use(custommiddleware.LoggingMiddleware())
 	r.Use(middleware.Recoverer)
-	r.Use(middleware.RequestID)
 	r.Use(middleware.RealIP)
 	r.Use(middleware.Compress(5))
 	r.Use(custommiddleware.IdempotencyMiddleware)
@@ -90,6 +90,6 @@ func NewRouter(cfg *config.Config, db *sqlx.DB) *chi.Mux {
 		w.Write([]byte(`{"message":"Wallet API is running","swagger":"/swagger/index.html"}`))
 	})
 
-	log.Println("Router configured with Swagger documentation at /swagger/index.html")
+	logger.Info("Router configured with Swagger documentation", zap.String("path", "/swagger/index.html"))
 	return r
 }
