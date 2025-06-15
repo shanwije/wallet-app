@@ -1,10 +1,13 @@
 package models
 
-import "time"
+import (
+	"time"
+	"github.com/google/uuid"
+)
 
 type Wallet struct {
-	ID        string    `db:"id"`
-	UserID    string    `db:"user_id"`
-	Balance   float64   `db:"balance"`
-	CreatedAt time.Time `db:"created_at"`
+	ID        uuid.UUID `db:"id" json:"id"`
+	UserID    uuid.UUID `db:"user_id" json:"user_id"`
+	Balance   float64   `db:"balance" json:"balance"`
+	CreatedAt time.Time `db:"created_at" json:"created_at"`
 }
