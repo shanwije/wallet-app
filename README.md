@@ -1,6 +1,6 @@
-# Wallet Backend Service - Crypto.com Assignment
+# Wallet Backend Service
 
-A robust, production-ready centralized wallet backend service built with Go, following clean architecture principles and financial industry best practices. This project was developed as a coding assignment to demonstrate senior-level engineering capabilities.
+A robust, production-ready centralized wallet backend service built with Go.
 
 ## Requirements
 
