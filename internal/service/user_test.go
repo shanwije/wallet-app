@@ -1,6 +1,7 @@
 package service
 
 import (
+	"database/sql"
 	"errors"
 	"testing"
 	"time"
@@ -68,6 +69,25 @@ func (m *MockWalletRepository) GetWalletByID(id uuid.UUID) (*models.Wallet, erro
 func (m *MockWalletRepository) UpdateBalance(id uuid.UUID, balance decimal.Decimal) error {
 	args := m.Called(id, balance)
 	return args.Error(0)
+}
+
+// Transaction support methods (not used in user tests, but required by interface)
+func (m *MockWalletRepository) BeginTx() (*sql.Tx, error) {
+	args := m.Called()
+	return nil, args.Error(1) // Return nil for Tx as it's not used in user tests
+}
+
+func (m *MockWalletRepository) UpdateBalanceWithTx(tx *sql.Tx, id uuid.UUID, balance decimal.Decimal) error {
+	args := m.Called(tx, id, balance)
+	return args.Error(0)
+}
+
+func (m *MockWalletRepository) GetWalletByIDWithTx(tx *sql.Tx, id uuid.UUID) (*models.Wallet, error) {
+	args := m.Called(tx, id)
+	if args.Get(0) == nil {
+		return nil, args.Error(1)
+	}
+	return args.Get(0).(*models.Wallet), args.Error(1)
 }
 
 // Core functionality test: Successful user creation with wallet
