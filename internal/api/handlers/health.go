@@ -8,10 +8,10 @@ import (
 
 // HealthResponse represents the health check response
 type HealthResponse struct {
-	Status    string    `json:"status" example:"ok"`
-	Timestamp time.Time `json:"timestamp" example:"2025-06-15T10:30:00Z"`
-	Service   string    `json:"service" example:"wallet-api"`
-	Version   string    `json:"version" example:"1.0.0"`
+	Status    string    `json:"status"`
+	Timestamp time.Time `json:"timestamp"`
+	Service   string    `json:"service"`
+	Version   string    `json:"version"`
 }
 
 // HealthHandler handles health check requests
@@ -22,11 +22,9 @@ func NewHealthHandler() *HealthHandler {
 	return &HealthHandler{}
 }
 
-// GetHealth godoc
-// @Summary Health check endpoint
-// @Description Get the health status of the API
+// GetHealth returns API health status
+// @Summary Health check
 // @Tags health
-// @Accept json
 // @Produce json
 // @Success 200 {object} HealthResponse
 // @Router /health [get]

@@ -14,5 +14,5 @@ WORKDIR /root/
 COPY --from=builder /app/main .
 COPY --from=builder /app/.env .
 
-EXPOSE 8080
+EXPOSE 8082
 CMD ["./main"]

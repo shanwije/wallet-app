@@ -7,11 +7,10 @@ services:
       context: ..
       dockerfile: Dockerfile
     ports:
-      - "8082:8080"
+      - "8082:8082"
     env_file: ../.env
     depends_on:
       - postgres
-      - redis
 
   postgres:
     container_name: wallet-app-postgres
@@ -24,12 +23,6 @@ services:
       - pgdata:/var/lib/postgresql/data
     ports:
       - "5434:5432"
-
-  redis:
-    container_name: wallet-app-redis
-    image: redis:alpine
-    ports:
-      - "6381:6379"
 
 volumes:
   pgdata:
