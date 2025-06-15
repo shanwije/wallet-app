@@ -2,6 +2,7 @@ package service
 
 import (
 	"context"
+	"database/sql"
 	"fmt"
 
 	"github.com/google/uuid"
@@ -12,9 +13,10 @@ import (
 
 // Transaction type constants for better readability
 const (
-	TransactionTypeDeposit  = "deposit"
-	TransactionTypeWithdraw = "withdraw"
-	TransactionTypeTransfer = "transfer"
+	TransactionTypeDeposit     = "deposit"
+	TransactionTypeWithdraw    = "withdraw"
+	TransactionTypeTransferOut = "transfer_out"
+	TransactionTypeTransferIn  = "transfer_in"
 )
 
 type WalletService struct {
@@ -111,14 +113,9 @@ func (s *WalletService) Deposit(ctx context.Context, walletID uuid.UUID, amount 
 }
 
 func (s *WalletService) Withdraw(ctx context.Context, walletID uuid.UUID, amount decimal.Decimal) (*models.Wallet, error) {
-	// Validate input
-	wallet, err := s.WalletRepo.GetWalletByID(ctx, walletID)
-	if err != nil {
-		return nil, fmt.Errorf("failed to get wallet: %w", err)
-	}
-
-	if err := s.validateWithdrawAmount(amount, wallet.Balance); err != nil {
-		return nil, err
+	// Validate input amount
+	if amount.LessThanOrEqual(decimal.Zero) {
+		return nil, fmt.Errorf("withdraw amount must be positive")
 	}
 
 	// Begin database transaction for atomicity
@@ -133,6 +130,17 @@ func (s *WalletService) Withdraw(ctx context.Context, walletID uuid.UUID, amount
 			}
 		}
 	}()
+
+	// Get current wallet
+	wallet, err := s.WalletRepo.GetWalletByIDWithTx(ctx, tx, walletID)
+	if err != nil {
+		return nil, fmt.Errorf("failed to get wallet: %w", err)
+	}
+
+	// Validate sufficient balance
+	if err := s.validateWithdrawAmount(amount, wallet.Balance); err != nil {
+		return nil, err
+	}
 
 	// Update balance
 	newBalance := wallet.Balance.Sub(amount)
@@ -185,93 +193,112 @@ func (s *WalletService) GetWalletByUserID(ctx context.Context, userID uuid.UUID)
 	return wallet, nil
 }
 
+// transferExecution handles the actual transfer logic within a transaction
+func (s *WalletService) transferExecution(ctx context.Context, tx *sql.Tx, fromWalletID, toWalletID uuid.UUID, amount decimal.Decimal, description string) error {
+	// Lock and get both wallets
+	fromWallet, toWallet, err := s.lockAndGetWallets(ctx, tx, fromWalletID, toWalletID)
+	if err != nil {
+		return err
+	}
+
+	// Validate sufficient balance
+	if fromWallet.Balance.LessThan(amount) {
+		return fmt.Errorf("insufficient balance")
+	}
+
+	// Update balances
+	if err := s.updateTransferBalances(ctx, tx, fromWalletID, toWalletID, fromWallet.Balance, toWallet.Balance, amount); err != nil {
+		return err
+	}
+
+	// Create transaction records
+	return s.createTransferRecords(ctx, tx, fromWalletID, toWalletID, amount, description)
+}
+
+// lockAndGetWallets locks and retrieves both wallets for transfer
+func (s *WalletService) lockAndGetWallets(ctx context.Context, tx *sql.Tx, fromWalletID, toWalletID uuid.UUID) (*models.Wallet, *models.Wallet, error) {
+	fromWallet, err := s.WalletRepo.GetWalletByIDWithTx(ctx, tx, fromWalletID)
+	if err != nil {
+		return nil, nil, fmt.Errorf("failed to get source wallet: %w", err)
+	}
+
+	toWallet, err := s.WalletRepo.GetWalletByIDWithTx(ctx, tx, toWalletID)
+	if err != nil {
+		return nil, nil, fmt.Errorf("failed to get destination wallet: %w", err)
+	}
+
+	return fromWallet, toWallet, nil
+}
+
+// updateTransferBalances updates both wallet balances
+func (s *WalletService) updateTransferBalances(ctx context.Context, tx *sql.Tx, fromWalletID, toWalletID uuid.UUID, fromBalance, toBalance, amount decimal.Decimal) error {
+	newFromBalance := fromBalance.Sub(amount)
+	newToBalance := toBalance.Add(amount)
+
+	if err := s.WalletRepo.UpdateBalanceWithTx(ctx, tx, fromWalletID, newFromBalance); err != nil {
+		return fmt.Errorf("failed to update source wallet balance: %w", err)
+	}
+
+	if err := s.WalletRepo.UpdateBalanceWithTx(ctx, tx, toWalletID, newToBalance); err != nil {
+		return fmt.Errorf("failed to update destination wallet balance: %w", err)
+	}
+
+	return nil
+}
+
+// createTransferRecords creates both transaction records for the transfer
+func (s *WalletService) createTransferRecords(ctx context.Context, tx *sql.Tx, fromWalletID, toWalletID uuid.UUID, amount decimal.Decimal, description string) error {
+	referenceID := uuid.New()
+
+	outTransaction := &models.Transaction{
+		WalletID:    fromWalletID,
+		Type:        TransactionTypeTransferOut,
+		Amount:      amount,
+		ReferenceID: &referenceID,
+		Description: &description,
+	}
+
+	if err := s.TransactionRepo.CreateTransactionWithTx(ctx, tx, outTransaction); err != nil {
+		return fmt.Errorf("failed to create outbound transaction: %w", err)
+	}
+
+	inTransaction := &models.Transaction{
+		WalletID:    toWalletID,
+		Type:        TransactionTypeTransferIn,
+		Amount:      amount,
+		ReferenceID: &referenceID,
+		Description: &description,
+	}
+
+	if err := s.TransactionRepo.CreateTransactionWithTx(ctx, tx, inTransaction); err != nil {
+		return fmt.Errorf("failed to create inbound transaction: %w", err)
+	}
+
+	return nil
+}
+
 // Transfer money between wallets atomically
 func (s *WalletService) Transfer(ctx context.Context, fromWalletID, toWalletID uuid.UUID, amount decimal.Decimal, description string) error {
-	// Validate input
 	if err := s.validateTransferAmount(amount, fromWalletID, toWalletID); err != nil {
 		return err
 	}
 
-	// Begin database transaction for atomicity
 	tx, err := s.WalletRepo.BeginTx(ctx)
 	if err != nil {
 		return fmt.Errorf("failed to begin transaction: %w", err)
 	}
 	defer func() {
-		if err != nil {
-			if tx != nil {
-				tx.Rollback()
-			}
+		if err != nil && tx != nil {
+			tx.Rollback()
 		}
 	}()
 
-	// Lock and get source wallet (FOR UPDATE to prevent race conditions)
-	fromWallet, err := s.WalletRepo.GetWalletByIDWithTx(ctx, tx, fromWalletID)
-	if err != nil {
-		return fmt.Errorf("failed to get source wallet: %w", err)
+	if err := s.transferExecution(ctx, tx, fromWalletID, toWalletID, amount, description); err != nil {
+		return err
 	}
 
-	// Lock and get destination wallet
-	toWallet, err := s.WalletRepo.GetWalletByIDWithTx(ctx, tx, toWalletID)
-	if err != nil {
-		return fmt.Errorf("failed to get destination wallet: %w", err)
-	}
-
-	// Check sufficient balance
-	if fromWallet.Balance.LessThan(amount) {
-		return fmt.Errorf("insufficient balance")
-	}
-
-	// Calculate new balances
-	newFromBalance := fromWallet.Balance.Sub(amount)
-	newToBalance := toWallet.Balance.Add(amount)
-
-	// Update balances
-	err = s.WalletRepo.UpdateBalanceWithTx(ctx, tx, fromWalletID, newFromBalance)
-	if err != nil {
-		return fmt.Errorf("failed to update source wallet balance: %w", err)
-	}
-
-	err = s.WalletRepo.UpdateBalanceWithTx(ctx, tx, toWalletID, newToBalance)
-	if err != nil {
-		return fmt.Errorf("failed to update destination wallet balance: %w", err)
-	}
-
-	// Create reference ID for linking both transaction records
-	referenceID := uuid.New()
-
-	// Create outbound transaction record
-	outTransaction := &models.Transaction{
-		WalletID:    fromWalletID,
-		Type:        TransactionTypeTransfer + "_out",
-		Amount:      amount,
-		ReferenceID: &referenceID,
-		Description: &description,
-	}
-
-	err = s.TransactionRepo.CreateTransactionWithTx(ctx, tx, outTransaction)
-	if err != nil {
-		return fmt.Errorf("failed to create outbound transaction: %w", err)
-	}
-
-	// Create inbound transaction record
-	inTransaction := &models.Transaction{
-		WalletID:    toWalletID,
-		Type:        TransactionTypeTransfer + "_in",
-		Amount:      amount,
-		ReferenceID: &referenceID,
-		Description: &description,
-	}
-
-	err = s.TransactionRepo.CreateTransactionWithTx(ctx, tx, inTransaction)
-	if err != nil {
-		return fmt.Errorf("failed to create inbound transaction: %w", err)
-	}
-
-	// Commit transaction
 	if tx != nil {
-		err = tx.Commit()
-		if err != nil {
+		if err := tx.Commit(); err != nil {
 			return fmt.Errorf("failed to commit transaction: %w", err)
 		}
 	}

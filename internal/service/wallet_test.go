@@ -113,25 +113,14 @@ func (m *MockTransactionRepositoryTest) GetTransactionsByWalletID(ctx context.Co
 	return args.Get(0).([]*models.Transaction), args.Error(1)
 }
 
-func TestWalletDeposit(t *testing.T) {
-	walletRepo := new(MockWalletRepositoryTest)
-	transactionRepo := new(MockTransactionRepositoryTest)
-
-	service := &WalletService{
-		WalletRepo:      walletRepo,
-		TransactionRepo: transactionRepo,
-	}
+func TestWalletDepositValidAmount(t *testing.T) {
+	service, walletRepo, transactionRepo := setupWalletService()
 
 	walletID := uuid.New()
-	wallet := &models.Wallet{
-		ID:      walletID,
-		Balance: decimal.NewFromFloat(100.0),
-	}
+	wallet := createTestWallet(walletID, testWalletBalance)
+	depositAmount := decimal.NewFromFloat(testDepositAmount)
+	expectedBalance := decimal.NewFromFloat(testWalletBalance + testDepositAmount)
 
-	expectedBalance := decimal.NewFromFloat(150.0)
-	depositAmount := decimal.NewFromFloat(50.0)
-
-	// Use nil transaction for simplicity in unit tests
 	walletRepo.On("BeginTx", mock.Anything).Return((*sql.Tx)(nil), nil)
 	walletRepo.On("GetWalletByIDWithTx", mock.Anything, (*sql.Tx)(nil), walletID).Return(wallet, nil)
 	walletRepo.On("UpdateBalanceWithTx", mock.Anything, (*sql.Tx)(nil), walletID, expectedBalance).Return(nil)
@@ -146,23 +135,13 @@ func TestWalletDeposit(t *testing.T) {
 	transactionRepo.AssertExpectations(t)
 }
 
-func TestWalletWithdraw(t *testing.T) {
-	walletRepo := new(MockWalletRepositoryTest)
-	transactionRepo := new(MockTransactionRepositoryTest)
-
-	service := &WalletService{
-		WalletRepo:      walletRepo,
-		TransactionRepo: transactionRepo,
-	}
+func TestWalletWithdrawValidAmount(t *testing.T) {
+	service, walletRepo, transactionRepo := setupWalletService()
 
 	walletID := uuid.New()
-	wallet := &models.Wallet{
-		ID:      walletID,
-		Balance: decimal.NewFromFloat(100.0),
-	}
-
-	expectedBalance := decimal.NewFromFloat(50.0)
-	withdrawAmount := decimal.NewFromFloat(50.0)
+	wallet := createTestWallet(walletID, testWalletBalance)
+	withdrawAmount := decimal.NewFromFloat(testWithdrawAmount)
+	expectedBalance := decimal.NewFromFloat(testWalletBalance - testWithdrawAmount)
 
 	walletRepo.On("BeginTx", mock.Anything).Return((*sql.Tx)(nil), nil)
 	walletRepo.On("GetWalletByIDWithTx", mock.Anything, (*sql.Tx)(nil), walletID).Return(wallet, nil)
