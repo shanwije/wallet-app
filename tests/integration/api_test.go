@@ -147,7 +147,7 @@ func TestWalletTransactionHistory(t *testing.T) {
 		if tx.Type == "deposit" {
 			foundDeposit = true
 		}
-		if tx.Type == "withdrawal" {
+		if tx.Type == "withdraw" {
 			foundWithdrawal = true
 		}
 

@@ -297,7 +297,7 @@ func TestWalletGetTransactionHistory(t *testing.T) {
 		{
 			ID:       uuid.New(),
 			WalletID: walletID,
-			Type:     "withdrawal",
+			Type:     "withdraw",
 			Amount:   decimal.NewFromFloat(25.0),
 		},
 	}
@@ -311,7 +311,7 @@ func TestWalletGetTransactionHistory(t *testing.T) {
 	assert.NotNil(t, result)
 	assert.Len(t, result, 2)
 	assert.Equal(t, "deposit", result[0].Type)
-	assert.Equal(t, "withdrawal", result[1].Type)
+	assert.Equal(t, "withdraw", result[1].Type)
 	walletRepo.AssertExpectations(t)
 	transactionRepo.AssertExpectations(t)
 }

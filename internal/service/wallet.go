@@ -110,7 +110,7 @@ func (s *WalletService) Withdraw(walletID uuid.UUID, amount decimal.Decimal) (*m
 	// Record transaction
 	transaction := &models.Transaction{
 		WalletID:    walletID,
-		Type:        "withdrawal",
+		Type:        "withdraw",
 		Amount:      amount,
 		Description: nil, // Optional description can be added later
 	}
