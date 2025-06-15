@@ -1,17 +1,10 @@
-package config
-
-import (
-	"os"
-
-	"github.com/joho/godotenv"
-)
-
 type Config struct {
 	DBHost     string
 	DBPort     string
 	DBUser     string
 	DBPassword string
 	DBName     string
+	DBSSLMode  string
 
 	RedisHost string
 	RedisPort string
@@ -29,6 +22,7 @@ func LoadConfig() *Config {
 		DBUser:     getEnv("DB_USER", "wallet"),
 		DBPassword: getEnv("DB_PASSWORD", "walletpass"),
 		DBName:     getEnv("DB_NAME", "wallet_db"),
+		DBSSLMode:  getEnv("DB_SSLMODE", "disable"),
 
 		RedisHost: getEnv("REDIS_HOST", "localhost"),
 		RedisPort: getEnv("REDIS_PORT", "6379"),
@@ -36,11 +30,4 @@ func LoadConfig() *Config {
 		AppPort:    getEnv("APP_PORT", "8080"),
 		APIVersion: getEnv("API_VERSION", "v1"),
 	}
-}
-
-func getEnv(key string, fallback string) string {
-	if value, exists := os.LookupEnv(key); exists {
-		return value
-	}
-	return fallback
 }

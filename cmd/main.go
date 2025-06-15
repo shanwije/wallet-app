@@ -6,20 +6,32 @@ import (
 
 	"github.com/shanwije/wallet-app/internal/api"
 	"github.com/shanwije/wallet-app/internal/config"
+	"github.com/shanwije/wallet-app/pkg/db"
 	_ "github.com/shanwije/wallet-app/docs"
 )
 
-// @title Wallet API
-// @version 1.0
-// @description This is a simple wallet API that allows users to deposit, withdraw, and transfer money between their wallets.
 func main() {
-	// Load configuration
+	// Load env config
 	cfg := config.LoadConfig()
 
-	// Setup router
-	router := api.NewRouter(cfg)
+	// Setup DB connection
+	pgCfg := db.PostgresConfig{
+		Host:     cfg.DBHost,
+		Port:     cfg.DBPort,
+		User:     cfg.DBUser,
+		Password: cfg.DBPassword,
+		Name:     cfg.DBName,
+		SSLMode:  cfg.DBSSLMode,
+	}
+	dbConn, err := db.NewPostgres(pgCfg)
+	if err != nil {
+		log.Fatalf("Failed to connect to DB: %v", err)
+	}
+
+	// Setup router and inject DB
+	router := api.NewRouter(cfg, dbConn)
 
 	// Start server
-	log.Printf("Starting server on port %s...", cfg.AppPort)
+	log.Printf("Server started on port %s", cfg.AppPort)
 	log.Fatal(http.ListenAndServe(":"+cfg.AppPort, router))
 }
