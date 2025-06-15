@@ -15,6 +15,14 @@ type createUserRequest struct {
 	Name string `json:"name"`
 }
 
+// CreateUser creates a user with wallet
+// @Summary Create user
+// @Tags users
+// @Accept json
+// @Produce json
+// @Param user body createUserRequest true "User details"
+// @Success 201 {object} models.UserWithWallet
+// @Router /api/v1/users [post]
 func (h *UserHandler) CreateUser(w http.ResponseWriter, r *http.Request) {
 	var req createUserRequest
 	if err := json.NewDecoder(r.Body).Decode(&req); err != nil {
@@ -34,5 +42,6 @@ func (h *UserHandler) CreateUser(w http.ResponseWriter, r *http.Request) {
 	}
 
 	w.Header().Set("Content-Type", "application/json")
+	w.WriteHeader(http.StatusCreated)
 	json.NewEncoder(w).Encode(user)
 }

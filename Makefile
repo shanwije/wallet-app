@@ -1,6 +1,6 @@
 include .env
 
-.PHONY: help up build down status logs clean migrate docs test test-unit test-integration
+.PHONY: help up build down status logs clean migrate docs test test-unit test-integration fmt vet
 
 # Help command for listing all available commands
 help:
@@ -17,14 +17,16 @@ help:
 	@echo "  test       Run all tests (unit + integration)"
 	@echo "  test-unit  Run unit tests only"
 	@echo "  test-integration  Run integration tests only"
+	@echo "  fmt        Format Go code"
+	@echo "  vet        Run go vet for code analysis"
 	@echo "----------------------------------------------------"
 
 # Docker Compose - Start services (always rebuild)
-up: test-unit
+up: fmt vet test-unit
 	go mod tidy && docker compose -f deployments/docker-compose.yaml up -d --build --force-recreate
 
 # Docker Compose - Build containers only
-build: test-unit
+build: fmt vet test-unit
 	go mod tidy && docker compose -f deployments/docker-compose.yaml build --no-cache
 
 # Docker Compose - Stop services
@@ -46,7 +48,7 @@ clean:
 # 🧪 Goose DB Migrations (ensure .env or ENV vars are available)
 migrate:
 	go run github.com/pressly/goose/v3/cmd/goose@latest -dir db/migrations postgres \
-		"host=$$DB_HOST port=$$DB_PORT user=$$DB_USER password=$$DB_PASSWORD dbname=$$DB_NAME sslmode=disable" up
+		"host=$$DB_HOST port=$$DB_PORT user=$$DB_USER password=$$DB_PASSWORD dbname=$$DB_NAME sslmode=$$DB_SSLMODE" up
 
 # 📚 Swagger Docs (assumes swag installed globally)
 docs:
@@ -63,3 +65,12 @@ test-integration:
 	@echo "Running integration tests..."
 	@echo "Note: Integration tests require running services (make up first)"
 	go test -v ./tests/integration/...
+
+# 🔧 Code Quality Commands
+fmt:
+	@echo "Formatting Go code..."
+	go fmt ./...
+
+vet:
+	@echo "Running go vet..."
+	go vet ./...

@@ -2,7 +2,6 @@ package db
 
 import (
 	"fmt"
-	"log"
 
 	"github.com/jmoiron/sqlx"
 	_ "github.com/lib/pq"
@@ -25,9 +24,9 @@ func New(cfg Config) (*sqlx.DB, error) {
 
 	db, err := sqlx.Connect("postgres", dsn)
 	if err != nil {
-		return nil, err
+		return nil, fmt.Errorf("failed to connect to PostgreSQL: %w", err)
 	}
 
-	log.Println("Connected to PostgreSQL")
+	// Connection successful - caller can log this if needed
 	return db, nil
 }

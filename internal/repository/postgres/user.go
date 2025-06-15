@@ -62,7 +62,7 @@ func (r *UserRepository) GetUserWithWallet(id uuid.UUID) (*models.UserWithWallet
 		WHERE u.id = $1`
 
 	row := r.db.QueryRow(query, id)
-	
+
 	var walletID sql.NullString
 	var walletUserID sql.NullString
 	var balance sql.NullFloat64
@@ -72,7 +72,7 @@ func (r *UserRepository) GetUserWithWallet(id uuid.UUID) (*models.UserWithWallet
 		&userWithWallet.ID, &userWithWallet.Name, &userWithWallet.CreatedAt,
 		&walletID, &walletUserID, &balance, &walletCreatedAt,
 	)
-	
+
 	if err != nil {
 		if err == sql.ErrNoRows {
 			return nil, fmt.Errorf("user not found")

@@ -69,7 +69,7 @@ func (r *WalletRepository) GetWalletByID(id uuid.UUID) (*models.Wallet, error) {
 
 func (r *WalletRepository) UpdateBalance(id uuid.UUID, balance float64) error {
 	query := `UPDATE wallets SET balance = $1 WHERE id = $2`
-	
+
 	result, err := r.db.Exec(query, balance, id)
 	if err != nil {
 		return fmt.Errorf("failed to update wallet balance: %w", err)

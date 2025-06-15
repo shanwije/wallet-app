@@ -4,10 +4,10 @@ import (
 	"log"
 	"net/http"
 
+	_ "github.com/shanwije/wallet-app/docs"
 	"github.com/shanwije/wallet-app/internal/api"
 	"github.com/shanwije/wallet-app/internal/config"
 	"github.com/shanwije/wallet-app/pkg/db"
-	_ "github.com/shanwije/wallet-app/docs"
 )
 
 func main() {
@@ -29,7 +29,7 @@ func main() {
 	}
 	defer dbConn.Close()
 	log.Println("Database connection established")
-	
+
 	// Setup router and inject DB
 	router := api.NewRouter(cfg, dbConn)
 
