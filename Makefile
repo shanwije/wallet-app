@@ -1,6 +1,6 @@
 include .env
 
-.PHONY: help up build down status logs clean migrate docs
+.PHONY: help up build down status logs clean migrate docs test test-unit test-integration
 
 # Help command for listing all available commands
 help:
@@ -14,14 +14,17 @@ help:
 	@echo "  clean      Stop and remove containers and volumes"
 	@echo "  migrate    Run Goose DB migrations"
 	@echo "  docs       Generate Swagger docs (requires swag)"
+	@echo "  test       Run all tests (unit + integration)"
+	@echo "  test-unit  Run unit tests only"
+	@echo "  test-integration  Run integration tests only"
 	@echo "----------------------------------------------------"
 
 # Docker Compose - Start services (always rebuild)
-up:
+up: test-unit
 	go mod tidy && docker compose -f deployments/docker-compose.yaml up -d --build --force-recreate
 
 # Docker Compose - Build containers only
-build:
+build: test-unit
 	go mod tidy && docker compose -f deployments/docker-compose.yaml build --no-cache
 
 # Docker Compose - Stop services
@@ -48,3 +51,15 @@ migrate:
 # 📚 Swagger Docs (assumes swag installed globally)
 docs:
 	swag init -g cmd/main.go -o docs
+
+# 🧪 Testing Commands
+test: test-unit test-integration
+
+test-unit:
+	@echo "Running unit tests..."
+	go test -v ./internal/... ./pkg/...
+
+test-integration:
+	@echo "Running integration tests..."
+	@echo "Note: Integration tests require running services (make up first)"
+	go test -v ./tests/integration/...

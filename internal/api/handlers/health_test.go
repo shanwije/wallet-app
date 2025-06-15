@@ -6,19 +6,19 @@ import (
 	"testing"
 )
 
-func TestHealthHandler(t *testing.T) {
+func TestHealthHandlerGetHealth(t *testing.T) {
 	req, err := http.NewRequest("GET", "/health", nil)
 	if err != nil {
 		t.Fatal(err)
 	}
 
 	rr := httptest.NewRecorder()
-	handler := http.HandlerFunc(HealthHandler)
+	handler := NewHealthHandler()
 
-	handler.ServeHTTP(rr, req)
+	handler.GetHealth(rr, req)
 
 	if status := rr.Code; status != http.StatusOK {
-		t.Errorf("HealthHandler returned wrong status code: got %v want %v",
+		t.Errorf("GetHealth returned wrong status code: got %v want %v",
 			status, http.StatusOK)
 	}
 }

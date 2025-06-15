@@ -3,7 +3,6 @@ package integration
 import (
 	"net/http"
 	"testing"
-	"time"
 )
 
 // TestSwaggerEndpoint tests that swagger documentation is accessible
