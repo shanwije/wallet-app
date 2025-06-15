@@ -14,6 +14,11 @@ type UserService struct {
 }
 
 func (s *UserService) CreateUser(name string) (*models.UserWithWallet, error) {
+	// Validate input
+	if name == "" {
+		return nil, fmt.Errorf("name cannot be empty")
+	}
+
 	// Create user
 	user, err := s.UserRepo.CreateUser(name)
 	if err != nil {

@@ -73,7 +73,7 @@ func (s *WalletService) Deposit(walletID uuid.UUID, amount decimal.Decimal) (*mo
 
 func (s *WalletService) Withdraw(walletID uuid.UUID, amount decimal.Decimal) (*models.Wallet, error) {
 	if amount.LessThanOrEqual(decimal.Zero) {
-		return nil, fmt.Errorf("withdrawal amount must be positive")
+		return nil, fmt.Errorf("withdraw amount must be positive")
 	}
 
 	// Begin database transaction for atomicity

@@ -190,3 +190,40 @@ func TestGetUserWithWallet(t *testing.T) {
 
 	userRepo.AssertExpectations(t)
 }
+
+// Tests for assignment requirements - user validation
+
+func TestCreateUserEmptyName(t *testing.T) {
+	userRepo := new(MockUserRepository)
+	walletRepo := new(MockWalletRepository)
+	service := &UserService{
+		UserRepo:   userRepo,
+		WalletRepo: walletRepo,
+	}
+
+	// Test empty name validation - should fail early, no repository calls expected
+	result, err := service.CreateUser("")
+	assert.Error(t, err)
+	assert.Nil(t, result)
+	assert.Contains(t, err.Error(), "name cannot be empty")
+
+	// No mock expectations needed since validation should fail before repository calls
+}
+
+func TestUUIDValidation(t *testing.T) {
+	// Test UUID generation and validation
+	validID := uuid.New()
+	nilID := uuid.Nil
+
+	assert.NotEqual(t, validID, nilID, "Generated UUIDs should not be nil")
+	assert.NotEmpty(t, validID.String(), "UUID string representation should not be empty")
+
+	// Test UUID parsing
+	parsedID, err := uuid.Parse(validID.String())
+	assert.NoError(t, err)
+	assert.Equal(t, validID, parsedID)
+
+	// Test invalid UUID parsing
+	_, err = uuid.Parse("invalid-uuid")
+	assert.Error(t, err, "Invalid UUID should cause parsing error")
+}

@@ -28,6 +28,13 @@ type transferRequest struct {
 	Description string  `json:"description,omitempty"`
 }
 
+// NewWalletHandler creates a new WalletHandler
+func NewWalletHandler(walletService *service.WalletService) *WalletHandler {
+	return &WalletHandler{
+		WalletService: walletService,
+	}
+}
+
 // Deposit adds money to a wallet
 // @Summary Deposit to wallet
 // @Tags wallets

@@ -315,3 +315,90 @@ func TestWalletGetTransactionHistory(t *testing.T) {
 	walletRepo.AssertExpectations(t)
 	transactionRepo.AssertExpectations(t)
 }
+
+// Tests for assignment requirements - edge cases and validation
+
+func TestWalletDepositZeroAmount(t *testing.T) {
+	walletRepo := new(MockWalletRepositoryTest)
+	transactionRepo := new(MockTransactionRepositoryTest)
+	service := &WalletService{
+		WalletRepo:      walletRepo,
+		TransactionRepo: transactionRepo,
+	}
+
+	walletID := uuid.New()
+	zeroAmount := decimal.Zero
+
+	result, err := service.Deposit(walletID, zeroAmount)
+
+	assert.Error(t, err)
+	assert.Nil(t, result)
+	assert.Contains(t, err.Error(), "deposit amount must be positive")
+}
+
+func TestWalletWithdrawZeroAmount(t *testing.T) {
+	walletRepo := new(MockWalletRepositoryTest)
+	transactionRepo := new(MockTransactionRepositoryTest)
+	service := &WalletService{
+		WalletRepo:      walletRepo,
+		TransactionRepo: transactionRepo,
+	}
+
+	walletID := uuid.New()
+	zeroAmount := decimal.Zero
+
+	result, err := service.Withdraw(walletID, zeroAmount)
+
+	assert.Error(t, err)
+	assert.Nil(t, result)
+	assert.Contains(t, err.Error(), "withdraw amount must be positive")
+}
+
+func TestWalletTransferZeroAmount(t *testing.T) {
+	walletRepo := new(MockWalletRepositoryTest)
+	transactionRepo := new(MockTransactionRepositoryTest)
+	service := &WalletService{
+		WalletRepo:      walletRepo,
+		TransactionRepo: transactionRepo,
+	}
+
+	fromWalletID := uuid.New()
+	toWalletID := uuid.New()
+	zeroAmount := decimal.Zero
+
+	err := service.Transfer(fromWalletID, toWalletID, zeroAmount, "Test")
+
+	assert.Error(t, err)
+	assert.Contains(t, err.Error(), "transfer amount must be positive")
+}
+
+func TestWalletDecimalPrecision(t *testing.T) {
+	// Test that decimal calculations maintain precision
+	amount1 := decimal.NewFromFloat(0.1)
+	amount2 := decimal.NewFromFloat(0.2)
+	sum := amount1.Add(amount2)
+	expected := decimal.NewFromFloat(0.3)
+
+	assert.True(t, sum.Equal(expected), "Decimal precision must be maintained")
+
+	// Test large numbers
+	large := decimal.NewFromFloat(999999999.99)
+	small := decimal.NewFromFloat(0.01)
+	result := large.Add(small)
+	expectedLarge := decimal.NewFromFloat(1000000000.00)
+	assert.True(t, result.Equal(expectedLarge), "Large number precision must be maintained")
+}
+
+func TestMoneyFormatting(t *testing.T) {
+	// Test money formatting for display purposes
+	amount := decimal.NewFromFloat(123.456789)
+
+	rounded := amount.Round(2)
+	expected := decimal.NewFromFloat(123.46)
+	assert.True(t, rounded.Equal(expected))
+
+	// Test zero handling
+	zero := decimal.Zero
+	assert.True(t, zero.IsZero())
+	assert.Equal(t, "0", zero.String())
+}

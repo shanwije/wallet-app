@@ -15,6 +15,13 @@ type createUserRequest struct {
 	Name string `json:"name"`
 }
 
+// NewUserHandler creates a new UserHandler
+func NewUserHandler(userService *service.UserService) *UserHandler {
+	return &UserHandler{
+		UserService: userService,
+	}
+}
+
 // CreateUser creates a user with wallet
 // @Summary Create user
 // @Tags users
