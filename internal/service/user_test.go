@@ -6,6 +6,7 @@ import (
 	"time"
 
 	"github.com/google/uuid"
+	"github.com/shopspring/decimal"
 	"github.com/stretchr/testify/assert"
 	"github.com/stretchr/testify/mock"
 
@@ -64,7 +65,7 @@ func (m *MockWalletRepository) GetWalletByID(id uuid.UUID) (*models.Wallet, erro
 	return args.Get(0).(*models.Wallet), args.Error(1)
 }
 
-func (m *MockWalletRepository) UpdateBalance(id uuid.UUID, balance float64) error {
+func (m *MockWalletRepository) UpdateBalance(id uuid.UUID, balance decimal.Decimal) error {
 	args := m.Called(id, balance)
 	return args.Error(0)
 }
@@ -91,7 +92,7 @@ func TestCreateUser(t *testing.T) {
 	expectedWallet := &models.Wallet{
 		ID:        walletID,
 		UserID:    userID,
-		Balance:   0.0,
+		Balance:   decimal.Zero,
 		CreatedAt: now,
 	}
 
@@ -105,7 +106,7 @@ func TestCreateUser(t *testing.T) {
 	assert.Equal(t, userID, result.ID)
 	assert.Equal(t, "John Doe", result.Name)
 	assert.Equal(t, walletID, result.Wallet.ID)
-	assert.Equal(t, 0.0, result.Wallet.Balance)
+	assert.True(t, result.Wallet.Balance.Equal(decimal.Zero))
 
 	userRepo.AssertExpectations(t)
 	walletRepo.AssertExpectations(t)
@@ -150,7 +151,7 @@ func TestGetUserWithWallet(t *testing.T) {
 		Wallet: models.Wallet{
 			ID:        walletID,
 			UserID:    userID,
-			Balance:   100.0,
+			Balance:   decimal.NewFromFloat(100.0),
 			CreatedAt: now,
 		},
 		CreatedAt: now,
@@ -165,7 +166,7 @@ func TestGetUserWithWallet(t *testing.T) {
 	assert.Equal(t, userID, result.ID)
 	assert.Equal(t, "John Doe", result.Name)
 	assert.Equal(t, walletID, result.Wallet.ID)
-	assert.Equal(t, 100.0, result.Wallet.Balance)
+	assert.True(t, result.Wallet.Balance.Equal(decimal.NewFromFloat(100.0)))
 
 	userRepo.AssertExpectations(t)
 }

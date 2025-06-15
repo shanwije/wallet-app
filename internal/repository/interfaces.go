@@ -3,6 +3,7 @@ package repository
 import (
 	"github.com/google/uuid"
 	"github.com/shanwije/wallet-app/internal/models"
+	"github.com/shopspring/decimal"
 )
 
 type UserRepository interface {
@@ -15,5 +16,5 @@ type WalletRepository interface {
 	CreateWallet(userID uuid.UUID) (*models.Wallet, error)
 	GetWalletByUserID(userID uuid.UUID) (*models.Wallet, error)
 	GetWalletByID(id uuid.UUID) (*models.Wallet, error)
-	UpdateBalance(id uuid.UUID, balance float64) error
+	UpdateBalance(id uuid.UUID, balance decimal.Decimal) error
 }

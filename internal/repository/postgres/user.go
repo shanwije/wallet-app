@@ -7,6 +7,7 @@ import (
 	"github.com/google/uuid"
 	"github.com/jmoiron/sqlx"
 	"github.com/shanwije/wallet-app/internal/models"
+	"github.com/shopspring/decimal"
 )
 
 type UserRepository struct {
@@ -87,7 +88,7 @@ func (r *UserRepository) GetUserWithWallet(id uuid.UUID) (*models.UserWithWallet
 		userWithWallet.Wallet = models.Wallet{
 			ID:        walletUUID,
 			UserID:    userUUID,
-			Balance:   balance.Float64,
+			Balance:   decimal.NewFromFloat(balance.Float64),
 			CreatedAt: walletCreatedAt.Time,
 		}
 	}

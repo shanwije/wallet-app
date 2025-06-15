@@ -8,6 +8,7 @@ require (
 	github.com/jmoiron/sqlx v1.4.0
 	github.com/joho/godotenv v1.5.1
 	github.com/lib/pq v1.10.9
+	github.com/shopspring/decimal v1.4.0
 	github.com/stretchr/testify v1.7.0
 	github.com/swaggo/http-swagger v1.3.4
 	github.com/swaggo/swag v1.16.4

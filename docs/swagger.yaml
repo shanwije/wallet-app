@@ -15,6 +15,16 @@ definitions:
       name:
         type: string
     type: object
+  handlers.depositRequest:
+    properties:
+      amount:
+        type: number
+    type: object
+  handlers.withdrawRequest:
+    properties:
+      amount:
+        type: number
+    type: object
   models.UserWithWallet:
     properties:
       created_at:
@@ -61,6 +71,76 @@ paths:
       summary: Create user
       tags:
       - users
+  /api/v1/wallets/{id}/balance:
+    get:
+      parameters:
+      - description: Wallet ID
+        in: path
+        name: id
+        required: true
+        type: string
+      produces:
+      - application/json
+      responses:
+        "200":
+          description: OK
+          schema:
+            $ref: '#/definitions/models.Wallet'
+      summary: Get wallet balance
+      tags:
+      - wallets
+  /api/v1/wallets/{id}/deposit:
+    post:
+      consumes:
+      - application/json
+      parameters:
+      - description: Wallet ID
+        in: path
+        name: id
+        required: true
+        type: string
+      - description: Deposit details
+        in: body
+        name: deposit
+        required: true
+        schema:
+          $ref: '#/definitions/handlers.depositRequest'
+      produces:
+      - application/json
+      responses:
+        "200":
+          description: OK
+          schema:
+            $ref: '#/definitions/models.Wallet'
+      summary: Deposit to wallet
+      tags:
+      - wallets
+  /api/v1/wallets/{id}/withdraw:
+    post:
+      consumes:
+      - application/json
+      parameters:
+      - description: Wallet ID
+        in: path
+        name: id
+        required: true
+        type: string
+      - description: Withdraw details
+        in: body
+        name: withdraw
+        required: true
+        schema:
+          $ref: '#/definitions/handlers.withdrawRequest'
+      produces:
+      - application/json
+      responses:
+        "200":
+          description: OK
+          schema:
+            $ref: '#/definitions/models.Wallet'
+      summary: Withdraw from wallet
+      tags:
+      - wallets
   /health:
     get:
       produces:

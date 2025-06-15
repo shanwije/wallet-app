@@ -48,6 +48,114 @@ const docTemplate = `{
                 }
             }
         },
+        "/api/v1/wallets/{id}/balance": {
+            "get": {
+                "produces": [
+                    "application/json"
+                ],
+                "tags": [
+                    "wallets"
+                ],
+                "summary": "Get wallet balance",
+                "parameters": [
+                    {
+                        "type": "string",
+                        "description": "Wallet ID",
+                        "name": "id",
+                        "in": "path",
+                        "required": true
+                    }
+                ],
+                "responses": {
+                    "200": {
+                        "description": "OK",
+                        "schema": {
+                            "$ref": "#/definitions/models.Wallet"
+                        }
+                    }
+                }
+            }
+        },
+        "/api/v1/wallets/{id}/deposit": {
+            "post": {
+                "consumes": [
+                    "application/json"
+                ],
+                "produces": [
+                    "application/json"
+                ],
+                "tags": [
+                    "wallets"
+                ],
+                "summary": "Deposit to wallet",
+                "parameters": [
+                    {
+                        "type": "string",
+                        "description": "Wallet ID",
+                        "name": "id",
+                        "in": "path",
+                        "required": true
+                    },
+                    {
+                        "description": "Deposit details",
+                        "name": "deposit",
+                        "in": "body",
+                        "required": true,
+                        "schema": {
+                            "$ref": "#/definitions/handlers.depositRequest"
+                        }
+                    }
+                ],
+                "responses": {
+                    "200": {
+                        "description": "OK",
+                        "schema": {
+                            "$ref": "#/definitions/models.Wallet"
+                        }
+                    }
+                }
+            }
+        },
+        "/api/v1/wallets/{id}/withdraw": {
+            "post": {
+                "consumes": [
+                    "application/json"
+                ],
+                "produces": [
+                    "application/json"
+                ],
+                "tags": [
+                    "wallets"
+                ],
+                "summary": "Withdraw from wallet",
+                "parameters": [
+                    {
+                        "type": "string",
+                        "description": "Wallet ID",
+                        "name": "id",
+                        "in": "path",
+                        "required": true
+                    },
+                    {
+                        "description": "Withdraw details",
+                        "name": "withdraw",
+                        "in": "body",
+                        "required": true,
+                        "schema": {
+                            "$ref": "#/definitions/handlers.withdrawRequest"
+                        }
+                    }
+                ],
+                "responses": {
+                    "200": {
+                        "description": "OK",
+                        "schema": {
+                            "$ref": "#/definitions/models.Wallet"
+                        }
+                    }
+                }
+            }
+        },
         "/health": {
             "get": {
                 "produces": [
@@ -91,6 +199,22 @@ const docTemplate = `{
             "properties": {
                 "name": {
                     "type": "string"
+                }
+            }
+        },
+        "handlers.depositRequest": {
+            "type": "object",
+            "properties": {
+                "amount": {
+                    "type": "number"
+                }
+            }
+        },
+        "handlers.withdrawRequest": {
+            "type": "object",
+            "properties": {
+                "amount": {
+                    "type": "number"
                 }
             }
         },

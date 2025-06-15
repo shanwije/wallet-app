@@ -7,6 +7,7 @@ import (
 	"github.com/google/uuid"
 	"github.com/jmoiron/sqlx"
 	"github.com/shanwije/wallet-app/internal/models"
+	"github.com/shopspring/decimal"
 )
 
 type WalletRepository struct {
@@ -21,7 +22,7 @@ func (r *WalletRepository) CreateWallet(userID uuid.UUID) (*models.Wallet, error
 	wallet := &models.Wallet{
 		ID:      uuid.New(),
 		UserID:  userID,
-		Balance: 0.0,
+		Balance: decimal.Zero,
 	}
 
 	query := `
@@ -67,7 +68,7 @@ func (r *WalletRepository) GetWalletByID(id uuid.UUID) (*models.Wallet, error) {
 	return wallet, nil
 }
 
-func (r *WalletRepository) UpdateBalance(id uuid.UUID, balance float64) error {
+func (r *WalletRepository) UpdateBalance(id uuid.UUID, balance decimal.Decimal) error {
 	query := `UPDATE wallets SET balance = $1 WHERE id = $2`
 
 	result, err := r.db.Exec(query, balance, id)

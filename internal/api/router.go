@@ -49,9 +49,11 @@ func NewRouter(cfg *config.Config, db *sqlx.DB) *chi.Mux {
 
 	// Create services
 	userService := &service.UserService{UserRepo: userRepo, WalletRepo: walletRepo}
+	walletService := &service.WalletService{WalletRepo: walletRepo}
 
 	// Create handlers
 	userHandler := &handlers.UserHandler{UserService: userService}
+	walletHandler := &handlers.WalletHandler{WalletService: walletService}
 	healthHandler := handlers.NewHealthHandler()
 
 	// Routes - using configurable API version
@@ -59,6 +61,13 @@ func NewRouter(cfg *config.Config, db *sqlx.DB) *chi.Mux {
 	r.Route(apiRoute, func(r chi.Router) {
 		r.Get("/health", healthHandler.GetHealth)
 		r.Post("/users", userHandler.CreateUser)
+
+		// Wallet operations
+		r.Route("/wallets/{id}", func(r chi.Router) {
+			r.Post("/deposit", walletHandler.Deposit)
+			r.Post("/withdraw", walletHandler.Withdraw)
+			r.Get("/balance", walletHandler.GetBalance)
+		})
 	})
 
 	// Health check at root level for simple monitoring
