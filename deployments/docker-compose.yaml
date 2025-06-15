@@ -1,16 +1,20 @@
+name: wallet-app
+
 services:
   api:
+    container_name: wallet-app-api
     build:
       context: ..
       dockerfile: Dockerfile
     ports:
-      - "8081:8080"
+      - "8082:8080"
     env_file: ../.env
     depends_on:
       - postgres
       - redis
 
   postgres:
+    container_name: wallet-app-postgres
     image: postgres:15
     environment:
       POSTGRES_USER: wallet
@@ -19,12 +23,13 @@ services:
     volumes:
       - pgdata:/var/lib/postgresql/data
     ports:
-      - "5433:5432"
+      - "5434:5432"
 
   redis:
+    container_name: wallet-app-redis
     image: redis:alpine
     ports:
-      - "6380:6379"
+      - "6381:6379"
 
 volumes:
   pgdata:
