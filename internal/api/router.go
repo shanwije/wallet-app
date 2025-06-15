@@ -12,6 +12,7 @@ import (
 
 	"github.com/shanwije/wallet-app/internal/api/handlers"
 	"github.com/shanwije/wallet-app/internal/config"
+	custommiddleware "github.com/shanwije/wallet-app/internal/middleware"
 	"github.com/shanwije/wallet-app/internal/repository/postgres"
 	"github.com/shanwije/wallet-app/internal/service"
 )
@@ -26,6 +27,7 @@ func NewRouter(cfg *config.Config, db *sqlx.DB) *chi.Mux {
 	r.Use(middleware.RequestID)
 	r.Use(middleware.RealIP)
 	r.Use(middleware.Compress(5))
+	r.Use(custommiddleware.IdempotencyMiddleware)
 
 	// CORS middleware
 	r.Use(func(next http.Handler) http.Handler {
@@ -46,10 +48,11 @@ func NewRouter(cfg *config.Config, db *sqlx.DB) *chi.Mux {
 	// Create repositories
 	userRepo := postgres.NewUserRepository(db)
 	walletRepo := postgres.NewWalletRepository(db)
+	transactionRepo := postgres.NewTransactionRepository(db)
 
 	// Create services
 	userService := &service.UserService{UserRepo: userRepo, WalletRepo: walletRepo}
-	walletService := &service.WalletService{WalletRepo: walletRepo}
+	walletService := &service.WalletService{WalletRepo: walletRepo, TransactionRepo: transactionRepo}
 
 	// Create handlers
 	userHandler := &handlers.UserHandler{UserService: userService}
@@ -66,7 +69,9 @@ func NewRouter(cfg *config.Config, db *sqlx.DB) *chi.Mux {
 		r.Route("/wallets/{id}", func(r chi.Router) {
 			r.Post("/deposit", walletHandler.Deposit)
 			r.Post("/withdraw", walletHandler.Withdraw)
+			r.Post("/transfer", walletHandler.Transfer)
 			r.Get("/balance", walletHandler.GetBalance)
+			r.Get("/transactions", walletHandler.GetTransactionHistory)
 		})
 	})
 

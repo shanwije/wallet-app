@@ -22,6 +22,12 @@ type withdrawRequest struct {
 	Amount float64 `json:"amount"`
 }
 
+type transferRequest struct {
+	ToWalletID  string  `json:"to_wallet_id"`
+	Amount      float64 `json:"amount"`
+	Description string  `json:"description,omitempty"`
+}
+
 // Deposit adds money to a wallet
 // @Summary Deposit to wallet
 // @Tags wallets
@@ -94,6 +100,50 @@ func (h *WalletHandler) Withdraw(w http.ResponseWriter, r *http.Request) {
 	json.NewEncoder(w).Encode(wallet)
 }
 
+// Transfer moves money from one wallet to another
+// @Summary Transfer between wallets
+// @Tags wallets
+// @Accept json
+// @Produce json
+// @Param id path string true "Wallet ID"
+// @Param transfer body transferRequest true "Transfer details"
+// @Success 200 {object} models.Wallet
+// @Router /api/v1/wallets/{id}/transfer [post]
+func (h *WalletHandler) Transfer(w http.ResponseWriter, r *http.Request) {
+	fromWalletIDStr := chi.URLParam(r, "id")
+	fromWalletID, err := uuid.Parse(fromWalletIDStr)
+	if err != nil {
+		http.Error(w, "Invalid source wallet ID", http.StatusBadRequest)
+		return
+	}
+
+	var req transferRequest
+	if err := json.NewDecoder(r.Body).Decode(&req); err != nil {
+		http.Error(w, "Invalid request", http.StatusBadRequest)
+		return
+	}
+
+	toWalletID, err := uuid.Parse(req.ToWalletID)
+	if err != nil {
+		http.Error(w, "Invalid destination wallet ID", http.StatusBadRequest)
+		return
+	}
+
+	// Convert float64 to decimal for precise calculations
+	amount := decimal.NewFromFloat(req.Amount)
+
+	err = h.WalletService.Transfer(fromWalletID, toWalletID, amount, req.Description)
+	if err != nil {
+		http.Error(w, err.Error(), http.StatusBadRequest)
+		return
+	}
+
+	w.Header().Set("Content-Type", "application/json")
+	json.NewEncoder(w).Encode(map[string]string{
+		"message": "Transfer completed successfully",
+	})
+}
+
 // GetBalance gets wallet balance
 // @Summary Get wallet balance
 // @Tags wallets
@@ -117,4 +167,29 @@ func (h *WalletHandler) GetBalance(w http.ResponseWriter, r *http.Request) {
 
 	w.Header().Set("Content-Type", "application/json")
 	json.NewEncoder(w).Encode(wallet)
+}
+
+// GetTransactionHistory gets transaction history for a wallet
+// @Summary Get wallet transaction history
+// @Tags wallets
+// @Produce json
+// @Param id path string true "Wallet ID"
+// @Success 200 {array} models.Transaction
+// @Router /api/v1/wallets/{id}/transactions [get]
+func (h *WalletHandler) GetTransactionHistory(w http.ResponseWriter, r *http.Request) {
+	walletIDStr := chi.URLParam(r, "id")
+	walletID, err := uuid.Parse(walletIDStr)
+	if err != nil {
+		http.Error(w, "Invalid wallet ID", http.StatusBadRequest)
+		return
+	}
+
+	transactions, err := h.WalletService.GetTransactionHistory(walletID)
+	if err != nil {
+		http.Error(w, err.Error(), http.StatusNotFound)
+		return
+	}
+
+	w.Header().Set("Content-Type", "application/json")
+	json.NewEncoder(w).Encode(transactions)
 }
