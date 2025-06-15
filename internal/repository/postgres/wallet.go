@@ -87,3 +87,43 @@ func (r *WalletRepository) UpdateBalance(id uuid.UUID, balance decimal.Decimal) 
 
 	return nil
 }
+
+// Transaction support methods
+func (r *WalletRepository) BeginTx() (*sql.Tx, error) {
+	return r.db.Begin()
+}
+
+func (r *WalletRepository) UpdateBalanceWithTx(tx *sql.Tx, id uuid.UUID, balance decimal.Decimal) error {
+	query := `UPDATE wallets SET balance = $1 WHERE id = $2`
+
+	result, err := tx.Exec(query, balance, id)
+	if err != nil {
+		return fmt.Errorf("failed to update wallet balance: %w", err)
+	}
+
+	rowsAffected, err := result.RowsAffected()
+	if err != nil {
+		return fmt.Errorf("failed to get rows affected: %w", err)
+	}
+
+	if rowsAffected == 0 {
+		return fmt.Errorf("wallet not found")
+	}
+
+	return nil
+}
+
+func (r *WalletRepository) GetWalletByIDWithTx(tx *sql.Tx, id uuid.UUID) (*models.Wallet, error) {
+	wallet := &models.Wallet{}
+	query := `SELECT id, user_id, balance, created_at FROM wallets WHERE id = $1 FOR UPDATE`
+
+	err := tx.QueryRow(query, id).Scan(&wallet.ID, &wallet.UserID, &wallet.Balance, &wallet.CreatedAt)
+	if err != nil {
+		if err == sql.ErrNoRows {
+			return nil, fmt.Errorf("wallet not found")
+		}
+		return nil, fmt.Errorf("failed to get wallet: %w", err)
+	}
+
+	return wallet, nil
+}
