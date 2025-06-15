@@ -136,20 +136,31 @@ func createRequestKey(r *http.Request, idempotencyKey string) (string, error) {
 // getCachedResponse retrieves a cached response if it exists and is still valid
 func getCachedResponse(key string) (CacheEntry, bool) {
 	globalCache.mutex.RLock()
-	defer globalCache.mutex.RUnlock()
-
 	entry, found := globalCache.cache[key]
+
 	if !found {
+		globalCache.mutex.RUnlock()
 		return CacheEntry{}, false
 	}
 
 	// Check if entry is still valid (24 hours)
 	if time.Since(entry.Timestamp) > 24*time.Hour {
-		// Entry is too old, remove it
-		delete(globalCache.cache, key)
+		globalCache.mutex.RUnlock() // Release read lock before acquiring write lock
+
+		// Acquire write lock for safe deletion
+		globalCache.mutex.Lock()
+		defer globalCache.mutex.Unlock()
+
+		// Double-check the entry still exists and is still expired
+		// (another goroutine might have already deleted it)
+		if entry, exists := globalCache.cache[key]; exists && time.Since(entry.Timestamp) > 24*time.Hour {
+			delete(globalCache.cache, key)
+		}
+
 		return CacheEntry{}, false
 	}
 
+	globalCache.mutex.RUnlock()
 	return entry, true
 }
 
