@@ -7,6 +7,7 @@ import (
 
 	"github.com/go-chi/chi/v5"
 	"github.com/go-chi/chi/v5/middleware"
+	"github.com/jmoiron/sqlx"
 	httpSwagger "github.com/swaggo/http-swagger"
 
 	"github.com/shanwije/wallet-app/internal/api/handlers"
@@ -14,7 +15,7 @@ import (
 )
 
 // Router sets up the HTTP router with all routes
-func NewRouter(cfg *config.Config) *chi.Mux {
+func NewRouter(cfg *config.Config, db *sqlx.DB) *chi.Mux {
 	r := chi.NewRouter()
 
 	// Middleware

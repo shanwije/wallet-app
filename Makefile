@@ -1,12 +1,13 @@
 include .env
 
-.PHONY: help up down status logs clean migrate docs
+.PHONY: help up build down status logs clean migrate docs
 
-# 💡 Help command for listing all available commands
+# Help command for listing all available commands
 help:
-	@echo "📦 Wallet App - Makefile Commands"
+	@echo "Wallet App - Makefile Commands"
 	@echo "----------------------------------------------------"
-	@echo "  up         Start all services via Docker Compose"
+	@echo "  up         Start all services with fresh build"
+	@echo "  build      Build containers without starting"
 	@echo "  down       Stop all running services"
 	@echo "  status     Show container status"
 	@echo "  logs       Tail all logs from services"
@@ -15,23 +16,27 @@ help:
 	@echo "  docs       Generate Swagger docs (requires swag)"
 	@echo "----------------------------------------------------"
 
-# 🐳 Docker Compose - Start services
+# Docker Compose - Start services (always rebuild)
 up:
-	go mod tidy && docker compose -f deployments/docker-compose.yaml up -d
+	go mod tidy && docker compose -f deployments/docker-compose.yaml up -d --build --force-recreate
 
-# 🐳 Docker Compose - Stop services
+# Docker Compose - Build containers only
+build:
+	go mod tidy && docker compose -f deployments/docker-compose.yaml build --no-cache
+
+# Docker Compose - Stop services
 down:
 	docker compose -f deployments/docker-compose.yaml down
 
-# 🐳 Docker Compose - Show container status
+# Docker Compose - Show container status
 status:
 	docker compose -f deployments/docker-compose.yaml ps
 
-# 🐳 Docker Compose - View service logs
+# Docker Compose - View service logs
 logs:
 	docker compose -f deployments/docker-compose.yaml logs -f
 
-# 🧼 Docker Compose - Clean everything
+# Docker Compose - Clean everything
 clean:
 	docker compose -f deployments/docker-compose.yaml down -v
 

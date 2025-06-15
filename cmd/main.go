@@ -15,7 +15,7 @@ func main() {
 	cfg := config.LoadConfig()
 
 	// Setup DB connection
-	pgCfg := db.PostgresConfig{
+	pgCfg := db.Config{
 		Host:     cfg.DBHost,
 		Port:     cfg.DBPort,
 		User:     cfg.DBUser,
@@ -23,11 +23,12 @@ func main() {
 		Name:     cfg.DBName,
 		SSLMode:  cfg.DBSSLMode,
 	}
-	dbConn, err := db.NewPostgres(pgCfg)
+	dbConn, err := db.New(pgCfg)
 	if err != nil {
 		log.Fatalf("Failed to connect to DB: %v", err)
 	}
-
+	defer dbConn.Close()
+	log.Println("Database connection established")
 	// Setup router and inject DB
 	router := api.NewRouter(cfg, dbConn)
 

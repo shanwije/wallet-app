@@ -1,3 +1,11 @@
+package config
+
+import (
+	"os"
+
+	"github.com/joho/godotenv"
+)
+
 type Config struct {
 	DBHost     string
 	DBPort     string
@@ -30,4 +38,11 @@ func LoadConfig() *Config {
 		AppPort:    getEnv("APP_PORT", "8080"),
 		APIVersion: getEnv("API_VERSION", "v1"),
 	}
+}
+
+func getEnv(key string, fallback string) string {
+	if value, exists := os.LookupEnv(key); exists {
+		return value
+	}
+	return fallback
 }
