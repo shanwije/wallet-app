@@ -113,11 +113,6 @@ func (s *WalletService) Deposit(ctx context.Context, walletID uuid.UUID, amount 
 }
 
 func (s *WalletService) Withdraw(ctx context.Context, walletID uuid.UUID, amount decimal.Decimal) (*models.Wallet, error) {
-	// Validate input amount
-	if amount.LessThanOrEqual(decimal.Zero) {
-		return nil, fmt.Errorf("withdraw amount must be positive")
-	}
-
 	// Begin database transaction for atomicity
 	tx, err := s.WalletRepo.BeginTx(ctx)
 	if err != nil {
@@ -137,7 +132,7 @@ func (s *WalletService) Withdraw(ctx context.Context, walletID uuid.UUID, amount
 		return nil, fmt.Errorf("failed to get wallet: %w", err)
 	}
 
-	// Validate sufficient balance
+	// Validate input amount and sufficient balance
 	if err := s.validateWithdrawAmount(amount, wallet.Balance); err != nil {
 		return nil, err
 	}

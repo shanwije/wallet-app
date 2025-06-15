@@ -352,13 +352,18 @@ func TestWalletWithdrawZeroAmount(t *testing.T) {
 	}
 
 	walletID := uuid.New()
+	wallet := createTestWallet(walletID, testWalletBalance)
 	zeroAmount := decimal.Zero
+
+	walletRepo.On("BeginTx", mock.Anything).Return((*sql.Tx)(nil), nil)
+	walletRepo.On("GetWalletByIDWithTx", mock.Anything, (*sql.Tx)(nil), walletID).Return(wallet, nil)
 
 	result, err := service.Withdraw(context.Background(), walletID, zeroAmount)
 
 	assert.Error(t, err)
 	assert.Nil(t, result)
 	assert.Contains(t, err.Error(), "withdraw amount must be positive")
+	walletRepo.AssertExpectations(t)
 }
 
 func TestWalletTransferZeroAmount(t *testing.T) {
