@@ -1,3 +1,4 @@
+// Package service provides business logic for wallet operations
 package service
 
 import (
@@ -12,6 +13,32 @@ import (
 
 	"github.com/shanwije/wallet-app/internal/models"
 )
+
+// Test fixtures and helper functions
+const (
+	testWalletBalance  = 100.0
+	testDepositAmount  = 50.0
+	testWithdrawAmount = 30.0
+)
+
+// setupWalletService creates a test wallet service with mocked dependencies
+func setupWalletService() (*WalletService, *MockWalletRepositoryTest, *MockTransactionRepositoryTest) {
+	walletRepo := new(MockWalletRepositoryTest)
+	transactionRepo := new(MockTransactionRepositoryTest)
+	service := &WalletService{
+		WalletRepo:      walletRepo,
+		TransactionRepo: transactionRepo,
+	}
+	return service, walletRepo, transactionRepo
+}
+
+// createTestWallet creates a wallet for testing
+func createTestWallet(id uuid.UUID, balance float64) *models.Wallet {
+	return &models.Wallet{
+		ID:      id,
+		Balance: decimal.NewFromFloat(balance),
+	}
+}
 
 // MockWalletRepository for testing
 type MockWalletRepositoryTest struct {

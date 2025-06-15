@@ -10,14 +10,52 @@ import (
 	"github.com/shopspring/decimal"
 )
 
+// Transaction type constants for better readability
+const (
+	TransactionTypeDeposit  = "deposit"
+	TransactionTypeWithdraw = "withdraw"
+	TransactionTypeTransfer = "transfer"
+)
+
 type WalletService struct {
 	WalletRepo      repository.WalletRepository
 	TransactionRepo repository.TransactionRepository
 }
 
-func (s *WalletService) Deposit(ctx context.Context, walletID uuid.UUID, amount decimal.Decimal) (*models.Wallet, error) {
+// validateDepositAmount validates that the deposit amount is positive
+func (s *WalletService) validateDepositAmount(amount decimal.Decimal) error {
 	if amount.LessThanOrEqual(decimal.Zero) {
-		return nil, fmt.Errorf("deposit amount must be positive")
+		return fmt.Errorf("deposit amount must be positive")
+	}
+	return nil
+}
+
+// validateWithdrawAmount validates that the withdraw amount is positive and sufficient
+func (s *WalletService) validateWithdrawAmount(amount decimal.Decimal, currentBalance decimal.Decimal) error {
+	if amount.LessThanOrEqual(decimal.Zero) {
+		return fmt.Errorf("withdraw amount must be positive")
+	}
+	if currentBalance.LessThan(amount) {
+		return fmt.Errorf("insufficient balance for withdrawal")
+	}
+	return nil
+}
+
+// validateTransferAmount validates transfer amount and wallets
+func (s *WalletService) validateTransferAmount(amount decimal.Decimal, fromWalletID, toWalletID uuid.UUID) error {
+	if amount.LessThanOrEqual(decimal.Zero) {
+		return fmt.Errorf("transfer amount must be positive")
+	}
+	if fromWalletID == toWalletID {
+		return fmt.Errorf("cannot transfer to the same wallet")
+	}
+	return nil
+}
+
+func (s *WalletService) Deposit(ctx context.Context, walletID uuid.UUID, amount decimal.Decimal) (*models.Wallet, error) {
+	// Validate input
+	if err := s.validateDepositAmount(amount); err != nil {
+		return nil, err
 	}
 
 	// Begin database transaction for atomicity
@@ -49,7 +87,7 @@ func (s *WalletService) Deposit(ctx context.Context, walletID uuid.UUID, amount 
 	// Record transaction
 	transaction := &models.Transaction{
 		WalletID:    walletID,
-		Type:        "deposit",
+		Type:        TransactionTypeDeposit,
 		Amount:      amount,
 		Description: nil, // Optional description can be added later
 	}
@@ -73,8 +111,14 @@ func (s *WalletService) Deposit(ctx context.Context, walletID uuid.UUID, amount 
 }
 
 func (s *WalletService) Withdraw(ctx context.Context, walletID uuid.UUID, amount decimal.Decimal) (*models.Wallet, error) {
-	if amount.LessThanOrEqual(decimal.Zero) {
-		return nil, fmt.Errorf("withdraw amount must be positive")
+	// Validate input
+	wallet, err := s.WalletRepo.GetWalletByID(ctx, walletID)
+	if err != nil {
+		return nil, fmt.Errorf("failed to get wallet: %w", err)
+	}
+
+	if err := s.validateWithdrawAmount(amount, wallet.Balance); err != nil {
+		return nil, err
 	}
 
 	// Begin database transaction for atomicity
@@ -90,17 +134,6 @@ func (s *WalletService) Withdraw(ctx context.Context, walletID uuid.UUID, amount
 		}
 	}()
 
-	// Get current wallet
-	wallet, err := s.WalletRepo.GetWalletByIDWithTx(ctx, tx, walletID)
-	if err != nil {
-		return nil, fmt.Errorf("failed to get wallet: %w", err)
-	}
-
-	// Check sufficient balance
-	if wallet.Balance.LessThan(amount) {
-		return nil, fmt.Errorf("insufficient balance")
-	}
-
 	// Update balance
 	newBalance := wallet.Balance.Sub(amount)
 	err = s.WalletRepo.UpdateBalanceWithTx(ctx, tx, walletID, newBalance)
@@ -111,7 +144,7 @@ func (s *WalletService) Withdraw(ctx context.Context, walletID uuid.UUID, amount
 	// Record transaction
 	transaction := &models.Transaction{
 		WalletID:    walletID,
-		Type:        "withdraw",
+		Type:        TransactionTypeWithdraw,
 		Amount:      amount,
 		Description: nil, // Optional description can be added later
 	}
@@ -154,12 +187,9 @@ func (s *WalletService) GetWalletByUserID(ctx context.Context, userID uuid.UUID)
 
 // Transfer money between wallets atomically
 func (s *WalletService) Transfer(ctx context.Context, fromWalletID, toWalletID uuid.UUID, amount decimal.Decimal, description string) error {
-	if amount.LessThanOrEqual(decimal.Zero) {
-		return fmt.Errorf("transfer amount must be positive")
-	}
-
-	if fromWalletID == toWalletID {
-		return fmt.Errorf("cannot transfer to the same wallet")
+	// Validate input
+	if err := s.validateTransferAmount(amount, fromWalletID, toWalletID); err != nil {
+		return err
 	}
 
 	// Begin database transaction for atomicity
@@ -213,7 +243,7 @@ func (s *WalletService) Transfer(ctx context.Context, fromWalletID, toWalletID u
 	// Create outbound transaction record
 	outTransaction := &models.Transaction{
 		WalletID:    fromWalletID,
-		Type:        "transfer_out",
+		Type:        TransactionTypeTransfer + "_out",
 		Amount:      amount,
 		ReferenceID: &referenceID,
 		Description: &description,
@@ -227,7 +257,7 @@ func (s *WalletService) Transfer(ctx context.Context, fromWalletID, toWalletID u
 	// Create inbound transaction record
 	inTransaction := &models.Transaction{
 		WalletID:    toWalletID,
-		Type:        "transfer_in",
+		Type:        TransactionTypeTransfer + "_in",
 		Amount:      amount,
 		ReferenceID: &referenceID,
 		Description: &description,
