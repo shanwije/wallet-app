@@ -1,0 +1,39 @@
+definitions:
+  handlers.HealthResponse:
+    properties:
+      service:
+        example: wallet-api
+        type: string
+      status:
+        example: ok
+        type: string
+      timestamp:
+        example: "2025-06-15T10:30:00Z"
+        type: string
+      version:
+        example: 1.0.0
+        type: string
+    type: object
+info:
+  contact: {}
+  description: This is a simple wallet API that allows users to deposit, withdraw,
+    and transfer money between their wallets.
+  title: Wallet API
+  version: "1.0"
+paths:
+  /health:
+    get:
+      consumes:
+      - application/json
+      description: Get the health status of the API
+      produces:
+      - application/json
+      responses:
+        "200":
+          description: OK
+          schema:
+            $ref: '#/definitions/handlers.HealthResponse'
+      summary: Health check endpoint
+      tags:
+      - health
+swagger: "2.0"

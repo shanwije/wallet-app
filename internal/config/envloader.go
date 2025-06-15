@@ -16,7 +16,8 @@ type Config struct {
 	RedisHost string
 	RedisPort string
 
-	AppPort string
+	AppPort    string
+	APIVersion string
 }
 
 func LoadConfig() *Config {
@@ -32,7 +33,8 @@ func LoadConfig() *Config {
 		RedisHost: getEnv("REDIS_HOST", "localhost"),
 		RedisPort: getEnv("REDIS_PORT", "6379"),
 
-		AppPort: getEnv("APP_PORT", "8080"),
+		AppPort:    getEnv("APP_PORT", "8080"),
+		APIVersion: getEnv("API_VERSION", "v1"),
 	}
 }
 

@@ -1,10 +1,28 @@
-include .env
+.PHONY: help up down status logs clean
 
-run:
-	go run cmd/main.go
+help:
+	@echo "Wallet App Commands:"
+	@echo "  up      - Start all services"
+	@echo "  down    - Stop all services"  
+	@echo "  status  - Show container status"
+	@echo "  logs    - Show all logs"
+	@echo "  clean   - Stop and remove containers"
+	@echo "  docs    - Generate Swagger documentation"
 
-dev-up:
-	docker compose -f deployments/docker-compose.yaml up --build
+up: ## Start all services
+	docker compose -f deployments/docker-compose.yaml up -d
 
-migrate:
-	goose -dir db/migrations postgres "user=$(DB_USER) password=$(DB_PASSWORD) dbname=$(DB_NAME) host=$(DB_HOST) sslmode=disable" up
+down: ## Stop all services
+	docker compose -f deployments/docker-compose.yaml down
+
+status: ## Show container status
+	docker compose -f deployments/docker-compose.yaml ps
+
+logs: ## Show all logs
+	docker compose -f deployments/docker-compose.yaml logs -f
+
+clean: ## Stop and remove containers
+	docker compose -f deployments/docker-compose.yaml down -v
+
+docs: ## Generate Swagger documentation
+	/Users/shan/go/bin/swag init -g cmd/main.go -o docs
