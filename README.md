@@ -1,65 +1,126 @@
-# Wallet Backend Service
+# Wallet Backend Service - Crypto.com Assignment
 
-A robust, production-ready centralized wallet backend service built with Go, following clean architecture principles and financial industry best practices.
+A robust, production-ready centralized wallet backend service built with Go, following clean architecture principles and financial industry best practices. This project was developed as a coding assignment to demonstrate senior-level engineering capabilities.
 
-## Features
+## Requirements
 
-### Core Functionality
-- **User Management**: Create users with automatic wallet creation
-- **Wallet Operations**: 
-  - Deposit funds to wallet
-  - Withdraw funds from wallet
-  - Transfer funds between wallets
-  - Check wallet balance
-  - Get transaction history
-- **Financial Compliance**: 
-  - ACID-compliant transactions
-  - Precise decimal arithmetic (no floating-point errors)
-  - Double-entry transaction records
-  - Atomic transfers with rollback capability
+### User Stories Implemented:
+- **User can deposit money into wallet** - Complete with validation and ACID transactions
+- **User can withdraw money from wallet** - Includes balance validation and atomic operations
+- **User can send money to another user** - Atomic transfers between wallets
+- **User can check wallet balance** - Real-time balance inquiry
+- **User can view transaction history** - Complete audit trail with transaction types
 
-### Technical Features
-- **Clean Architecture**: Separation of concerns with domain, service, and repository layers
-- **Database Support**: PostgreSQL with migration support
-- **API Documentation**: Swagger/OpenAPI 3.0 specification
-- **Idempotency**: Prevent duplicate transactions with idempotency keys
-- **Structured Logging**: Production-ready logging with Zap
-- **Error Handling**: Comprehensive error handling with custom error types
-- **Configuration**: Environment-based configuration with validation
-- **Health Checks**: Service health monitoring and readiness endpoints
-- **Context Propagation**: Request context and tracing throughout the application
-- **Graceful Shutdown**: Proper service lifecycle management
-- **Testing**: Unit tests and integration tests with comprehensive coverage
-- **Docker Support**: Containerized deployment with Docker Compose
-- **Code Quality**: Linting, formatting, and static analysis
+### Technical Requirements
+- **Language**: Go 1.21+
+- **Database**: PostgreSQL
+- **In-memory Database**: Redis-ready architecture (in-memory cache for development, later can easily configured through current cache interface)
+- **Centralized Wallet**: Complete user and wallet management system
 
-## Architecture
+## Design Decisions
 
+#### 1. **Financial Precision**
+- **Decision**: Use `github.com/shopspring/decimal` for all monetary calculations
+- **Implementation**: All money values stored as `DECIMAL(20,2)` in database
+
+#### 2. **ACID Transaction Compliance**
+- **Decision**: Wrap all financial operations in database transactions
+- **Implementation**: Service layer manages transaction boundaries with proper rollback
+
+#### 3. **Double-Entry Transaction Recording**
+- **Decision**: Create transaction records for both sides of transfers
+- **Implementation**: Linked transactions using `reference_id` field
+
+#### 6. **Idempotency Support**
+- **Decision**: Implement idempotency middleware for POST operations
+- **Implementation**: In-memory cache for development, Redis or Memcache ready architecture for production
+
+## Quick Start Guide
+
+### Prerequisites
+- Go 1.21+
+- Docker & Docker Compose
+- Make (optional)
+
+### Option 1: Docker Compose (Recommended)
+
+1. **Clone and setup**
+   ```bash
+   git clone <repository-url>
+   cd wallet-app
+   cp .env.example .env
+   ```
+
+2. **Start all services**
+   ```bash
+   make up
+   # This will:
+   # - Build the application
+   # - Start PostgreSQL database
+   # - Run database migrations
+   # - Start the API server
+   ```
+
+3. **Verify the setup**
+   ```bash
+   curl http://localhost:8082/health
+   # Expected: {"status":"ok","database":"connected"}
+   ```
+
+4. **Access the API**
+   - **API Base URL**: http://localhost:8082/api/v1
+   - **Swagger Documentation**: http://localhost:8082/swagger/index.html
+   - **Health Check**: http://localhost:8082/health
+
+### Option 2: Local Configuration
+
+1. **Setup PostgreSQL**
+   ```bash
+   # Using Docker
+   docker run -d \
+     --name wallet-postgres \
+     -e POSTGRES_USER=wallet \
+     -e POSTGRES_PASSWORD=walletpass \
+     -e POSTGRES_DB=wallet_db \
+     -p 5432:5432 \
+     postgres:15
+   ```
+
+2. **Run migrations**
+   ```bash
+   make migrate
+   ```
+
+3. **Start the application**
+   ```bash
+   make run
+   # or directly: go run cmd/main.go
+   ```
+
+##  Testing Strategy
+
+### Test Coverage Overview
+- **Unit Tests**: Service layer business logic (60%+ coverage, This could have been even higher if the scope of the repository is larger )
+- **Integration Tests**: Full API workflow testing
+
+### Running Tests
+
+```bash
+# Run all tests
+make test
+
+# Unit tests only
+make test-unit
+
+# Integration tests only  
+make test-integration
+
+# With coverage report
+go test ./... -coverprofile=coverage.out
+go tool cover -html=coverage.out
 ```
-cmd/                    # Application entry points
-├── main.go            # Main application entry point
-internal/
-├── api/               # HTTP handlers and routing
-│   └── handlers/      # Request handlers with structured logging
-├── config/            # Configuration management with validation
-├── middleware/        # HTTP middleware (idempotency, logging, etc.)
-├── models/            # Data models with validation
-├── repository/        # Data access layer with context support
-│   └── postgres/      # PostgreSQL implementations
-└── service/           # Business logic layer with context support
-pkg/
-├── db/                # Database connection and utilities
-├── errors/            # Custom error types and HTTP responses
-├── health/            # Health check utilities
-└── logger/            # Structured logging with Zap
-tests/
-└── integration/       # Integration tests
-docs/                  # Swagger documentation
-deployments/           # Docker Compose configuration
-db/migrations/         # Database migration files
-```
 
-## API Endpoints
+## API Endpoints ( Please refer to swagger for more information )
 
 ### User Management
 | Method | Endpoint | Description |
@@ -81,248 +142,225 @@ db/migrations/         # Database migration files
 | GET | `/health` | Service health check |
 | GET | `/swagger/index.html` | API documentation |
 
-## Quick Start
 
-### Prerequisites
-- Go 1.21+
-- PostgreSQL 12+
-- Docker (optional)
 
-### Local Development
+#### **Additional Features** (Beyond requirements)
 
-1. **Clone the repository**
-   ```bash
-   git clone <repository-url>
-   cd wallet-app
-   ```
+- Swagger API documentation
+- Idempotency middleware
+- Structured logging with request tracing
+- Health check endpoints
+- Docker containerization
+- Database migrations
+- Comprehensive error handling
+- Configuration validation
 
-2. **Set up environment variables**
-   ```bash
-   cp .env.example .env
-   # Edit .env with your database configuration
-   ```
+#### **Features Not Implemented** (Conscious decisions)
+- **Authentication/Authorization**: Not required within the scope, noted for production
+- **Redis/ Memcache Integration**: Architecture ready with Docker container, using in-memory cache for simplicity  
+- **Rate Limiting**: Production feature, not core to wallet functionality
+- **Pagination**: Transaction history returns all records (easily extendable)
+- **Audit Logging**: Basic transaction records implemented, advanced auditing for production
 
-3. **Start PostgreSQL** (using Docker)
-   ```bash
-   make db-up
-   ```
+## 🛠️ Areas for Improvement
 
-4. **Run database migrations**
-   ```bash
-   make migrate-up
-   ```
+### **Short-term Enhancements** (Production readiness)
+1. **Authentication & Authorization**
+   - JWT-based user authentication
+   - Role-based access control (RBAC)
+   - API key management for service-to-service communication
 
-5. **Run the application**
-   ```bash
-   make run
-   ```
+2. **Enhanced Security**
+   - Rate limiting per user/IP
+   - Request signing for sensitive operations
+   - Audit logging for compliance
+   - Data encryption at rest
 
-6. **Access the API**
-   - API: http://localhost:8082/api/v1
-   - Swagger: http://localhost:8082/swagger/index.html
-   - Health: http://localhost:8082/health
+3. **Performance Optimization**
+   - Transaction history pagination
+   - Database query optimization
+   - Redis implementation for distributed idempotency
+   - Connection pool tuning
 
-### Using Docker
+4. **Ops Support**
+   - Metrics collection (Prometheus)
+   - Distributed tracing (Jaeger)
+   - Alerting and monitoring dashboards
+   - Log aggregation (ELK stack)
 
-```bash
-# Build and start all services
-make up
+### **Long-term Enhancements** (Scalability)
+1. **Microservices Architecture**
+   - Separate user service and wallet service
+   - Event-driven architecture with message queues
+   - API Gateway for unified interface
 
-# Stop services
-make down
+2. **Data Layer**
+   - Read replicas for query performance
+   - Database sharding for horizontal scaling
+   - Event sourcing for complete audit trail
 
-# View logs
-make logs
+3. **Advanced Features**
+   - Multi-currency support
+   - Transaction categorization and tagging
+   - Spending limits and controls
+   - Scheduled/recurring transactions
+
+## 🔧 Technical Implementation Details
+
+### **Project Structure**
+```
+wallet-app/
+├── cmd/main.go                 # Application bootstrap
+├── internal/                   # Private application code
+│   ├── api/                    # HTTP layer
+│   │   ├── handlers/           # Request handlers
+│   │   └── router.go           # Route configuration
+│   ├── config/                 # Configuration management
+│   ├── middleware/             # HTTP middleware
+│   ├── models/                 # Domain models
+│   ├── repository/             # Data access layer
+│   │   └── postgres/           # PostgreSQL implementations
+│   └── service/                # Business logic layer
+├── pkg/                        # Reusable packages
+│   ├── db/                     # Database utilities
+│   ├── errors/                 # Error handling
+│   ├── health/                 # Health checks
+│   └── logger/                 # Logging utilities
+├── tests/integration/          # Integration tests
+├── db/migrations/              # Database schema
+├── deployments/                # Docker configuration
+└── docs/                       # API documentation
 ```
 
-## Testing
+## 📊 API Examples
 
-### Unit Tests
-```bash
-make test-unit
-```
-
-### Integration Tests
-```bash
-# Start the application first
-make up
-
-# Run integration tests
-make test-integration
-```
-
-### All Tests
-```bash
-make test
-```
-
-## Money Handling
-
-This service uses precise decimal arithmetic to handle money correctly:
-
-- **No floating-point arithmetic**: Uses `github.com/shopspring/decimal` for all monetary calculations
-- **Database storage**: Money stored as `DECIMAL(19,4)` for precision
-- **API format**: Accepts money as `float64` in JSON but immediately converts to `decimal.Decimal`
-
-## Transaction Guarantees
-
-### ACID Compliance
-- **Atomicity**: All wallet operations are wrapped in database transactions
-- **Consistency**: Balance constraints and validation rules are enforced
-- **Isolation**: Concurrent transactions use proper locking
-- **Durability**: All operations are persisted to PostgreSQL
-
-### Double-Entry Bookkeeping
-- Every transfer creates two transaction records (debit and credit)
-- Transaction records are linked via `reference_id`
-- Complete audit trail for all monetary movements
-
-## Idempotency
-
-The service supports idempotency for all POST operations:
-
+### **Create User with Wallet**
 ```bash
 curl -X POST http://localhost:8082/api/v1/users \
   -H "Content-Type: application/json" \
-  -H "Idempotency-Key: unique-key-123" \
+  -H "Idempotency-Key: user-creation-001" \
   -d '{"name": "John Doe"}'
+
+# Response:
+{
+  "user": {
+    "id": "123e4567-e89b-12d3-a456-426614174000",
+    "name": "John Doe",
+    "created_at": "2024-06-16T10:30:00Z"
+  },
+  "wallet": {
+    "id": "456e7890-e89b-12d3-a456-426614174001",
+    "user_id": "123e4567-e89b-12d3-a456-426614174000",
+    "balance": "0.00",
+    "created_at": "2024-06-16T10:30:00Z"
+  }
+}
 ```
 
-- Same `Idempotency-Key` returns identical response
-- Prevents duplicate transactions
-- Keys expire after 24 hours
+### **Deposit Funds**
+```bash
+curl -X POST http://localhost:8082/api/v1/wallets/456e7890-e89b-12d3-a456-426614174001/deposit \
+  -H "Content-Type: application/json" \
+  -H "Idempotency-Key: deposit-001" \
+  -d '{"amount": 100.50}'
 
-## Configuration
+# Response:
+{
+  "id": "456e7890-e89b-12d3-a456-426614174001",
+  "user_id": "123e4567-e89b-12d3-a456-426614174000",
+  "balance": "100.50",
+  "created_at": "2024-06-16T10:30:00Z"
+}
+```
 
-### Environment Variables
+### **Transfer Between Wallets**
+```bash
+curl -X POST http://localhost:8082/api/v1/wallets/456e7890-e89b-12d3-a456-426614174001/transfer \
+  -H "Content-Type: application/json" \
+  -H "Idempotency-Key: transfer-001" \
+  -d '{
+    "to_wallet_id": "789e0123-e89b-12d3-a456-426614174002",
+    "amount": 25.00,
+    "description": "Payment for services"
+  }'
 
-| Variable | Description | Default |
-|----------|-------------|---------|
-| `APP_PORT` | HTTP server port | `8082` |
-| `API_VERSION` | API version prefix | `v1` |
-| `DB_HOST` | PostgreSQL host | `localhost` |
-| `DB_PORT` | PostgreSQL port | `5432` |
-| `DB_NAME` | Database name | `wallet_db` |
-| `DB_USER` | Database user | `postgres` |
-| `DB_PASSWORD` | Database password | `password` |
-| `DB_SSLMODE` | SSL mode | `disable` |
+# Response: HTTP 200 OK (no body for transfer operations)
+```
 
-## Error Handling
+### **Get Transaction History**
+```bash
+curl http://localhost:8082/api/v1/wallets/456e7890-e89b-12d3-a456-426614174001/transactions
 
-The API returns consistent error responses:
+# Response:
+[
+  {
+    "id": "tx-001",
+    "wallet_id": "456e7890-e89b-12d3-a456-426614174001",
+    "type": "deposit",
+    "amount": "100.50",
+    "description": null,
+    "created_at": "2024-06-16T10:30:00Z"
+  },
+  {
+    "id": "tx-002",
+    "wallet_id": "456e7890-e89b-12d3-a456-426614174001",
+    "type": "transfer_out",
+    "amount": "25.00",
+    "reference_id": "ref-001",
+    "description": "Payment for services",
+    "created_at": "2024-06-16T10:35:00Z"
+  }
+]
+```
 
+## 🏃‍♂️ Makefile Commands
+
+| Command | Description | Usage |
+|---------|-------------|-------|
+| `make help` | Show all available commands | Development guidance |
+| `make up` | Start all services (build + migrate + run) | Full environment setup |
+| `make down` | Stop all services | Environment cleanup |
+| `make build` | Build containers without starting | CI/CD builds |
+| `make status` | Show container status | Environment monitoring |
+| `make logs` | View service logs | Debugging |
+| `make clean` | Stop and remove all containers + volumes | Full cleanup |
+| `make migrate` | Run database migrations | Schema updates |
+| `make test` | Run all tests (unit + integration) | Quality assurance |
+| `make test-unit` | Run unit tests only | Fast feedback loop |
+| `make test-integration` | Run integration tests only | API validation |
+| `make fmt` | Format Go code | Code consistency |
+| `make vet` | Run go vet analysis | Static analysis |
+| `make docs` | Generate Swagger documentation | API docs |
+
+## 📝 API Documentation
+
+### **OpenAPI/Swagger**
+- **Interactive Docs**: Available at `/swagger/index.html` when running
+- **Specification**: Generated from Go code annotations
+- **Testing Interface**: Direct API testing from documentation
+
+### **Endpoint Summary**
+
+| Method | Endpoint | Purpose | Request Body | Response |
+|--------|----------|---------|--------------|----------|
+| POST | `/api/v1/users` | Create user + wallet | `{"name": "string"}` | User + Wallet objects |
+| POST | `/api/v1/wallets/{id}/deposit` | Add funds | `{"amount": number}` | Updated wallet |
+| POST | `/api/v1/wallets/{id}/withdraw` | Remove funds | `{"amount": number}` | Updated wallet |
+| POST | `/api/v1/wallets/{id}/transfer` | Send to another wallet | `{"to_wallet_id": "uuid", "amount": number, "description": "string"}` | Success status |
+| GET | `/api/v1/wallets/{id}/balance` | Check balance | None | Wallet object |
+| GET | `/api/v1/wallets/{id}/transactions` | Transaction history | None | Transaction array |
+| GET | `/health` | Service health | None | Health status |
+
+### **Error Response Format**
 ```json
 {
-  "error": "insufficient balance",
+  "error": "descriptive error message",
   "code": 400
 }
 ```
 
-Common HTTP status codes:
-- `200`: Success
-- `201`: Created
-- `400`: Bad Request (validation error)
-- `404`: Not Found
-- `500`: Internal Server Error
-
-## Security Considerations
-
-### Current Implementation
-- Input validation and sanitization
-- SQL injection prevention using parameterized queries
-- CORS headers configuration
-- Request size limiting
-
-### Production Recommendations
-- Add authentication/authorization (JWT tokens)
-- Rate limiting
-- API key management
-- Audit logging
-- Encrypt sensitive data at rest
-- Use HTTPS only
-- Network segmentation
-
-## Database Schema
-
-### Users Table
-```sql
-CREATE TABLE users (
-    id UUID PRIMARY KEY DEFAULT gen_random_uuid(),
-    name VARCHAR(255) NOT NULL,
-    created_at TIMESTAMP DEFAULT CURRENT_TIMESTAMP
-);
+### **Idempotency Header**
+```bash
+# All POST requests support idempotency
+Idempotency-Key: unique-operation-identifier
 ```
-
-### Wallets Table
-```sql
-CREATE TABLE wallets (
-    id UUID PRIMARY KEY DEFAULT gen_random_uuid(),
-    user_id UUID NOT NULL REFERENCES users(id),
-    balance DECIMAL(19,4) NOT NULL DEFAULT 0,
-    created_at TIMESTAMP DEFAULT CURRENT_TIMESTAMP
-);
-```
-
-### Transactions Table
-```sql
-CREATE TABLE transactions (
-    id UUID PRIMARY KEY DEFAULT gen_random_uuid(),
-    wallet_id UUID NOT NULL REFERENCES wallets(id),
-    type VARCHAR(50) NOT NULL,
-    amount DECIMAL(19,4) NOT NULL,
-    reference_id UUID,
-    description TEXT,
-    created_at TIMESTAMP DEFAULT CURRENT_TIMESTAMP
-);
-```
-
-## Performance Considerations
-
-- Database indexes on frequently queried columns
-- Connection pooling for database connections
-- Prepared statements for repeated queries
-- Pagination support for transaction history (future enhancement)
-
-## Monitoring and Observability
-
-### Health Checks
-- `/health` endpoint for service health
-- Database connectivity check
-- Response time monitoring
-
-### Logging
-- Structured logging with request IDs
-- Error logging with stack traces
-- Audit logs for financial operations
-
-## Makefile Commands
-
-| Command | Description |
-|---------|-------------|
-| `make up` | Start all services with Docker |
-| `make down` | Stop all services |
-| `make build` | Build the application |
-| `make run` | Run the application locally |
-| `make test` | Run all tests |
-| `make test-unit` | Run unit tests only |
-| `make test-integration` | Run integration tests only |
-| `make db-up` | Start PostgreSQL container |
-| `make db-down` | Stop PostgreSQL container |
-| `make migrate-up` | Apply database migrations |
-| `make migrate-down` | Rollback database migrations |
-| `make fmt` | Format Go code |
-| `make vet` | Run go vet |
-| `make docs` | Generate Swagger documentation |
-
-## Contributing
-
-1. Fork the repository
-2. Create a feature branch
-3. Make your changes
-4. Add tests for new functionality
-5. Run `make test` and `make fmt`
-6. Submit a pull request
-
-## License
-
-This project is licensed under the MIT License - see the LICENSE file for details.

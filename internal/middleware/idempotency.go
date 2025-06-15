@@ -10,7 +10,7 @@ import (
 	"time"
 )
 
-// Simple in-memory cache for idempotency (in production, use Redis)
+// Simple in-memory cache for idempotency (in production, use Redis or any other caching solution)
 type IdempotencyCache struct {
 	cache map[string]CacheEntry
 	mutex sync.RWMutex

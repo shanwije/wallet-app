@@ -16,9 +16,6 @@ type Config struct {
 	DBName     string `validate:"required" env:"DB_NAME"`
 	DBSSLMode  string `validate:"required,oneof=disable require verify-ca verify-full" env:"DB_SSL_MODE"`
 
-	RedisHost string `validate:"required" env:"REDIS_HOST"`
-	RedisPort string `validate:"required,numeric" env:"REDIS_PORT"`
-
 	AppPort     string `validate:"required,numeric" env:"APP_PORT"`
 	APIVersion  string `validate:"required" env:"API_VERSION"`
 	Environment string `validate:"required,oneof=development staging production" env:"ENVIRONMENT"`
@@ -34,9 +31,6 @@ func LoadConfig() (*Config, error) {
 		DBPassword: getEnv("DB_PASSWORD", "walletpass"),
 		DBName:     getEnv("DB_NAME", "wallet_db"),
 		DBSSLMode:  getEnv("DB_SSL_MODE", "disable"),
-
-		RedisHost: getEnv("REDIS_HOST", "localhost"),
-		RedisPort: getEnv("REDIS_PORT", "6379"),
 
 		AppPort:     getEnv("APP_PORT", "8082"),
 		APIVersion:  getEnv("API_VERSION", "v1"),

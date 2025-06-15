@@ -26,12 +26,4 @@ CREATE TABLE transactions (
     created_at TIMESTAMPTZ DEFAULT now()
 );
 
-CREATE TABLE idempotency_keys (
-    key TEXT PRIMARY KEY,
-    wallet_id UUID NOT NULL REFERENCES wallets(id) ON DELETE CASCADE,
-    response_body JSONB,
-    status_code INTEGER,
-    created_at TIMESTAMPTZ DEFAULT now()
-);
-
 -- +goose StatementEnd
